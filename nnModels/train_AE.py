@@ -66,7 +66,7 @@ def train_AE(model, data_loader, nb_epochs=100, device='cuda' if torch.cuda.is_a
             val_mean_loss = sum(val_loss) / len(val_loss)
         losses.append(val_mean_loss)
         iterator.set_postfix(
-            {"epoch": epoch, "train mean loss:": train_mean_loss, "validation mean loss": {val_mean_loss}})
+            {"Epoch": epoch, "Train mean loss": train_mean_loss, "Validation mean loss": val_mean_loss})
         print("\n")
 
         # Save model if validation loss decreased

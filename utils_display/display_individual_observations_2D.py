@@ -123,7 +123,7 @@ def display_individual_observations_2D(model, subject_id, dataset_csv, transform
                 axarr[0, i].imshow(data[0][i].squeeze().cpu().detach().numpy())
                 axarr[2, i].imshow(
                     projected_images[i].squeeze().cpu().detach().numpy())
-                axarr[0, i].set_title(f"Age = {data[1][0][i]}", fontsize=64)
+                axarr[0, i].set_title(f"Age = {data[1][0][i]:.3f}", fontsize=64)
 
         else:
             f, axarr = plt.subplots(2, total_number_of_observation, figsize=(fig_width, fig_height))
@@ -131,7 +131,7 @@ def display_individual_observations_2D(model, subject_id, dataset_csv, transform
             for i in range(len(data[1][0])):
                 axarr[0, i].imshow(data[0][i].squeeze().cpu().detach().numpy())
                 axarr[1, i].imshow(reconstructed[i].squeeze().cpu().detach().numpy())
-                axarr[0, i].set_title(f"Age = {data[1][0][i]}", fontsize=64)
+                axarr[0, i].set_title(f"Age = {data[1][0][i]:.3f}", fontsize=64)
 
     f.suptitle(f'Individual id = {data[2][0]}', fontsize=80)
     plt.tight_layout()

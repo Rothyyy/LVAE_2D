@@ -55,16 +55,16 @@ def test(model, data_loader, longitudinal_estimator=None,
                 alignment_loss = longitudinal_loss(mu, torch.cat(([
                     torch.tensor(predicted_latent_variables[str(subject_id)]).float().to(device) for subject_id in
                     data[2]])))
-                total_alignment_loss += alignment_loss
+                total_alignment_loss += alignment_loss.item()
                 loss += model.gamma * alignment_loss
 
             total_recon_loss += reconstruction_loss.item()
             total_kl_loss += kl_loss.item()
             total_loss.append(float(loss.item()))
 
-    print("reconstruction loss =", total_recon_loss / nb_batches, "weighted kl loss =",
+    print("Reconstruction loss =", total_recon_loss / nb_batches, ",Weighted kl loss =",
           total_kl_loss * model.beta / nb_batches,
-          "weighted alignment loss = ", total_alignment_loss * model.gamma / nb_batches)
+          ",Weighted alignment loss =", total_alignment_loss * model.gamma / nb_batches)
 
     return sum(total_loss) / len(total_loss)
 

@@ -21,7 +21,7 @@ from utils_display.display_individual_observations_2D import display_individual_
 from dataset.LongitudinalDataset2D import LongitudinalDataset2D, longitudinal_collate_2D
 from nnModels.train_AE import train_AE
 """
-Script to train the full model. Neural netowrk model + longitudinal estimator
+Script to train the full model. Neural network model + longitudinal estimator
 """
 parser = argparse.ArgumentParser()
 parser.add_argument('--data', type=str, required=False, default="./starmen_dataset.csv",
@@ -50,15 +50,17 @@ parser.add_argument('--longitudinal_estimator_path', type=str, required=False,
                     help='path where the longitudinal estimator parameters are saved')
 args = parser.parse_args()
 
+# First we get the different train/validation/test dataset
 df = pd.read_csv(args.data)
-# Split the data into train (80%) and test (20%) sets
-train_val_df, test_df = group_based_train_test_split(df, test_size=0.2, group_col='subject_id', random_state=42)
-train_df, validation_df = group_based_train_test_split(train_val_df, test_size=0.125, group_col='subject_id', random_state=42)
-# Save the training set to a CSV file
-train_df.to_csv('starmen_train_set.csv', index=False)
-validation_df.to_csv('starmen_validation_set.csv', index=False)
-# Save the test set to a CSV file
-test_df.to_csv('starmen_test_set.csv', index=False)
+if not(os.path.isfile("starmen_train_set.csv")) and not(os.path.isfile("starmen_test_set.csv")) and not(os.path.isfile("starmen_validation_set.csv")):
+    # Split the data into train (80%) and test (20%) sets
+    train_val_df, test_df = group_based_train_test_split(df, test_size=0.2, group_col='subject_id', random_state=42)
+    train_df, validation_df = group_based_train_test_split(train_val_df, test_size=0.125, group_col='subject_id', random_state=42)
+    # Save the training set to a CSV file
+    train_df.to_csv('starmen_train_set.csv', index=False)
+    validation_df.to_csv('starmen_validation_set.csv', index=False)
+    # Save the test set to a CSV file
+    test_df.to_csv('starmen_test_set.csv', index=False)
 
 ###  Hyperparameters of the Variational autoencoder model
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
@@ -99,10 +101,18 @@ def open_npy(path):
     return torch.from_numpy(np.load(path)).float()
 
 
+# If we want to remove existing checkpoints
+# folder_path = 'saved_models_2D'
+# for file_name in os.listdir(folder_path):
+#     file_path = os.path.join(folder_path, file_name)
+#     os.unlink(file_path)
+
+
 output_path = f"outputs_reconstruction/{args.nnmodel_name}_{temp_args.dimension}_{temp_args.beta}_{temp_args.gamma}_{args.iterations}/"
 os.makedirs(os.path.dirname(output_path), exist_ok=True)
-# model.load_state_dict(torch.load(f"saved_models_2D/modelnormalementcamarche_5.0_100.0_4_200.pth", map_location='cpu'))
 
+
+# Training of the vanilla VAE
 validation_dataset = Dataset2D('starmen_validation_set.csv', read_image=open_npy,
                                    transform=transformations)
 easy_dataset = Dataset2D('starmen_train_set.csv', read_image=open_npy,
@@ -119,13 +129,15 @@ all_losses, _ = train_AE(model, data_loader, nb_epochs=300, device=device,
 
 
 model.to(device)
-plt.plot(np.arange(1, len(all_losses) + 1), all_losses)
-plt.savefig(f"{output_path}loss_nolongitudinal.pdf")
+plt.plot(np.arange(1, len(all_losses) + 1), all_losses, label="Train loss (VAE)")
+plt.legend()
+plt.grid(True)
+plt.savefig(f"{output_path}loss_VAE.pdf")
 plt.show()
 
-# model.load_state_dict(torch.load(f"saved_models_2D/modelnormalementcamarche_5.0_100.0_4_200.pth", map_location='cpu'))
 
 
+# Training of the Longitudinal VAE
 model.load_state_dict(torch.load(nn_saving_path, map_location='cpu'))
 model.freeze_conv()
 best_loss = 1e15
@@ -138,23 +150,22 @@ data_loader = DataLoader(easy_dataset, batch_size=batch_size, num_workers=0, shu
                          collate_fn=longitudinal_collate_2D)
 validation_data_loader = DataLoader(validation_dataset, batch_size=batch_size, num_workers=0, shuffle=False,
                                     collate_fn=longitudinal_collate_2D)
-best_loss, losses = train(model, data_loader, test_saem_estimator, algo_settings, nb_epochs=300,
+best_loss, lvae_losses = train(model, data_loader, test_saem_estimator, algo_settings, nb_epochs=300,
                           lr=initial_lr,
                           nn_saving_path=nn_saving_path + f"2", longitudinal_saving_path=longitudinal_saving_path,
                           loss_graph_saving_path=f"{output_path}/loss_longitudinal_only.pdf", previous_best_loss=best_loss,
                           spatial_loss=loss_function, validation_data_loader=validation_data_loader)
 test_saem_estimator = Leaspy.load(longitudinal_saving_path)
 model.load_state_dict(torch.load(nn_saving_path + "2", map_location='cpu'))
-plt.show()
-plt.plot(np.arange(1, len(losses) + 1), losses)
-plt.savefig(f"{output_path}loss_longitudinal.pdf")
-plt.show()
-all_losses.extend(losses)
 
-plt.plot(np.arange(1, len(all_losses) + 1), all_losses)
-plt.savefig(f"{output_path}lossfull.pdf")
+plt.plot(np.arange(len(all_losses), len(all_losses) + len(lvae_losses)), lvae_losses, label="Train loss (LVAE)")
+plt.grid(True)
+plt.legend()
+plt.savefig(f"{output_path}loss_LVAE.pdf")
 plt.show()
 
+
+# Using the trained LVAE to do some projection
 algo_settings = AlgorithmSettings('mcmc_saem', n_iter=30000, seed=45, noise_model="gaussian_diagonal")
 results_estimator, _ = fit_longitudinal_estimator_on_nn(data_loader, model, device, test_saem_estimator,
                                                         algo_settings)

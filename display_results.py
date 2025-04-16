@@ -24,10 +24,10 @@ if __name__=="__main__":
     # Loading the models
     model = CVAE2D_ORIGINAL(latent_representation_size)
     model.load_state_dict(torch.load(nn_saving_path + "2", map_location='cpu'))
-    saem_estimator = Leaspy.load(longitudinal_saving_path)
+    saem_estimator = Leaspy.load(longitudinal_saving_path + "2")
 
     num_sample = 10
-    random_patient = np.random.choice(df_dataset["subject_id"].unique(), 10, replace=False)
+    random_patient = np.random.choice(df_dataset["subject_id"].unique(), num_sample, replace=False)
     print(random_patient)
     for patient_id in random_patient:
         display_individual_observations_2D(model, patient_id, dataset_path, 
@@ -35,7 +35,6 @@ if __name__=="__main__":
                                            save_path=f"{output_path}results_2D_subject{patient_id}_proj.pdf")
         display_individual_observations_2D(model, patient_id, dataset_path, 
                                            fitted_longitudinal_estimator=None,
-                                           save_path=f"{output_path}results_2D_subject{patient_id}_proj.pdf")
+                                           save_path=f"{output_path}results_2D_subject{patient_id}_noproj.pdf")
 
-    
 

@@ -12,7 +12,7 @@ def project_encodings_for_training(data_df, longitudinal_estimator):
     data = Data.from_dataframe(data_df)
     settings_personalization = AlgorithmSettings('scipy_minimize', use_jacobian=True)
     ip = longitudinal_estimator.personalize(data, settings_personalization)  # TODO: Maybe change with sampling instead
-    # of parameters chosen to maximize likelihood
+                                                                             #       of parameters chosen to maximize likelihood
     reconstruction_dict = {}
     for i in range(len(data_df['ID'].unique())):
         subject_id = data_df['ID'].unique()[i]

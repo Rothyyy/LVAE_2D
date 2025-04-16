@@ -8,7 +8,7 @@ import os
 import sys
 from longitudinalModel.project_encodings_for_training import project_encodings_for_training
 from longitudinalModel.test import test
-from fit_longitudinal_estimator_on_nn import fit_longitudinal_estimator_on_nn
+from longitudinalModel.fit_longitudinal_estimator_on_nn import fit_longitudinal_estimator_on_nn
 from nnModels.losses import longitudinal_loss, spatial_auto_encoder_loss
 from torch.optim.lr_scheduler import CosineAnnealingWarmRestarts
 import torch.nn.functional as F
@@ -101,9 +101,9 @@ def train(model, data_loader, longitudinal_estimator=None,
             total_loss.append(loss.item())
             total_recon_loss += reconstruction_loss.item()
             total_kl_loss += kl_loss.item()
-        print("\n reconstruction loss =", total_recon_loss / nb_batch, "weighted kl loss =",
+        print("\n Reconstruction loss =", total_recon_loss / nb_batch, ",Weighted KL loss =",
               total_kl_loss / nb_batch * model.beta,
-              "weighted alignment loss", total_alignment_loss / nb_batch * model.gamma, "\n")
+              ",Weighted alignment loss =", total_alignment_loss / nb_batch * model.gamma, "\n")
 
         train_loss = sum(total_loss) / nb_batch
         epoch_loss = train_loss
@@ -133,10 +133,12 @@ def train(model, data_loader, longitudinal_estimator=None,
         if nb_epochs_without_loss_improvement >= 30:
             break
     print("\n")
-    plt.plot(np.arange(1, len(losses) + 1), losses)
-    if loss_graph_saving_path is not None:
-        os.makedirs(os.path.dirname(loss_graph_saving_path), exist_ok=True)
-        plt.savefig(loss_graph_saving_path)
-    plt.show()
+    # plt.plot(np.arange(1, len(losses) + 1), losses, label="Loss")
+    # if loss_graph_saving_path is not None:
+    #     os.makedirs(os.path.dirname(loss_graph_saving_path), exist_ok=True)
+    #     plt.legend()
+    #     plt.grid()
+    #     plt.savefig(loss_graph_saving_path)
+    # plt.show()
 
     return best_loss, losses

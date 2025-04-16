@@ -1,1 +1,2 @@
 data_starmen/images/*.npy
+__pycache__/
