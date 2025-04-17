@@ -7,7 +7,6 @@ import numpy as np
 import os
 import sys
 
-from longitudinalModel.test import test
 from nnModels.losses import spatial_auto_encoder_loss, loss_bvae, loss_bvae2
 from torch.optim.lr_scheduler import CosineAnnealingWarmRestarts
 
