@@ -65,6 +65,8 @@ if not(os.path.isfile("starmen_train_set.csv")) and not(os.path.isfile("starmen_
 ###  Hyperparameters of the Variational autoencoder model
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 print("device = ", device)
+num_worker = round(os.cpu_count()/6)   # For faster GPU training
+
 batch_size = args.batch_size
 latent_representation_size = args.dimension
 gamma = args.gamma
@@ -118,8 +120,8 @@ validation_dataset = Dataset2D('starmen_validation_set.csv', read_image=open_npy
 easy_dataset = Dataset2D('starmen_train_set.csv', read_image=open_npy,
                          transform=transformations)
 
-data_loader = DataLoader(easy_dataset, batch_size=batch_size, num_workers=0, shuffle=True, pin_memory=True, )
-validation_data_loader = DataLoader(validation_dataset, batch_size=batch_size, num_workers=0, shuffle=True,
+data_loader = DataLoader(easy_dataset, batch_size=batch_size, num_workers=num_worker, shuffle=True, pin_memory=True, )
+validation_data_loader = DataLoader(validation_dataset, batch_size=batch_size, num_workers=num_worker, shuffle=True,
                                     pin_memory=True, )
 
 all_losses, _ = train_AE(model, data_loader, nb_epochs=300, device=device,
@@ -146,9 +148,9 @@ validation_dataset = LongitudinalDataset2D('starmen_validation_set.csv', read_im
 easy_dataset = LongitudinalDataset2D('starmen_train_set.csv', read_image=open_npy,
                                      transform=transformations)
 
-data_loader = DataLoader(easy_dataset, batch_size=batch_size, num_workers=0, shuffle=False,
+data_loader = DataLoader(easy_dataset, batch_size=batch_size, num_workers=num_worker, shuffle=False,
                          collate_fn=longitudinal_collate_2D)
-validation_data_loader = DataLoader(validation_dataset, batch_size=batch_size, num_workers=0, shuffle=False,
+validation_data_loader = DataLoader(validation_dataset, batch_size=batch_size, num_workers=num_worker, shuffle=False,
                                     collate_fn=longitudinal_collate_2D)
 best_loss, lvae_losses = train(model, data_loader, test_saem_estimator, algo_settings, nb_epochs=300,
                           lr=initial_lr,

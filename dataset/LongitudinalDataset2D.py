@@ -46,7 +46,7 @@ class LongitudinalDataset2D(Dataset):
 
 
 def longitudinal_collate_2D(batch, device='cuda' if torch.cuda.is_available() else 'cpu'):
-    images = torch.cat([item[0].to(device) for item in batch if item[0] is not None], axis=0)
+    images = torch.cat([item[0] for item in batch if item[0] is not None], axis=0)
     # TODO: here use reshape instead of unsqueeze so the input size is fixed
     images = images.unsqueeze(1)
     infos = [item[1] for item in batch if item[0] is not None]
