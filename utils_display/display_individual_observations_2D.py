@@ -38,7 +38,7 @@ def display_individual_observations_2D(model, subject_id, dataset_csv, transform
 
     class IndividualLongitudinalDataset(Dataset):
         def __init__(self, summary_file, subject_id, transform=None, target_transform=None,
-                     read_image=lambda x: torch.Tensor(plt.imshow(x))):
+                     read_image=lambda x: torch.Tensor(plt.imshow(x, cmap="gray"))):
             self.summary_dataframe = pd.read_csv(summary_file).sort_values(['subject_id', 'age'])
             self.subject_id = subject_id
             self.transform = transform
@@ -115,22 +115,24 @@ def display_individual_observations_2D(model, subject_id, dataset_csv, transform
                                                                                         projection_timepoints)
             projected_images = model.decoder(torch.tensor(predicted_latent_variables[str(subject_id)]).to(device))
             f, axarr = plt.subplots(3, total_number_of_observation, figsize=(fig_width, fig_height))
-
+            # print("Projected images :")
+            # print(torch.unique(projected_images[2]))
+            # print(projected_images[2].max())
+            # print(projected_images[2].min())
             for i in range(len(data[1][0])):
 
                 if data[1][0][i] in reference_times:
-                    axarr[1, i].imshow(projected_images[i].squeeze().cpu().detach().numpy())
-                axarr[0, i].imshow(data[0][i].squeeze().cpu().detach().numpy())
-                axarr[2, i].imshow(
-                    projected_images[i].squeeze().cpu().detach().numpy())
+                    axarr[1, i].imshow(projected_images[i].squeeze().cpu().detach().numpy(), cmap='gray')
+                axarr[0, i].imshow(data[0][i].squeeze().cpu().detach().numpy(), cmap='gray')
+                axarr[2, i].imshow(projected_images[i].squeeze().cpu().detach().numpy(), cmap='gray')
                 axarr[0, i].set_title(f"Age = {data[1][0][i]:.3f}", fontsize=64)
 
         else:
             f, axarr = plt.subplots(2, total_number_of_observation, figsize=(fig_width, fig_height))
             mu, logVar, reconstructed, encoded = model.forward(data[0].float().to(device))
             for i in range(len(data[1][0])):
-                axarr[0, i].imshow(data[0][i].squeeze().cpu().detach().numpy())
-                axarr[1, i].imshow(reconstructed[i].squeeze().cpu().detach().numpy())
+                axarr[0, i].imshow(data[0][i].squeeze().cpu().detach().numpy(), cmap='gray')
+                axarr[1, i].imshow(reconstructed[i].squeeze().cpu().detach().numpy(), cmap='gray')
                 axarr[0, i].set_title(f"Age = {data[1][0][i]:.3f}", fontsize=64)
 
     f.suptitle(f'Individual id = {data[2][0]}', fontsize=80)

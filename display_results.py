@@ -17,7 +17,8 @@ if __name__=="__main__":
     latent_representation_size = 4
     nn_saving_path = "saved_models_2D/CVAE2D_4_5_100_200.pth"
     longitudinal_saving_path = "saved_models_2D/longitudinal_estimator_params_CVAE2D_4_5_100_200.json"
-    dataset_path = "../starmen_dataset.csv"
+    dataset_path = "./starmen_dataset.csv"      # Consider the whole dataset
+    # dataset_path = "./starmen_test_set.csv"   # Consider only the test set 
     df_dataset = pd.read_csv(dataset_path)
     output_path = "results_reconstruction/CVAE2D_4_5_100_200/"
 
