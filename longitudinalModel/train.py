@@ -101,9 +101,9 @@ def train(model, data_loader, longitudinal_estimator=None,
             total_loss.append(loss.item())
             total_recon_loss += reconstruction_loss.item()
             total_kl_loss += kl_loss.item()
-        print("\n Reconstruction loss =", total_recon_loss / nb_batch, ",Weighted KL loss =",
+        print("\n Reconstruction loss =", total_recon_loss / nb_batch, ", Weighted KL loss =",
               total_kl_loss / nb_batch * model.beta,
-              ",Weighted alignment loss =", total_alignment_loss / nb_batch * model.gamma, "\n")
+              ", Weighted alignment loss =", total_alignment_loss / nb_batch * model.gamma, "\n")
 
         train_loss = sum(total_loss) / nb_batch
         epoch_loss = train_loss
