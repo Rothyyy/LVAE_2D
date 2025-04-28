@@ -1,0 +1,11 @@
+,age,image_path,subject_id
+0,0,./data_starmen/anomaly_images/SimulatedData__Reconstruction__starman__subject_s406__tp_0.npy,406
+1,1,./data_starmen/anomaly_images/SimulatedData__Reconstruction__starman__subject_s406__tp_1.npy,406
+2,2,./data_starmen/anomaly_images/SimulatedData__Reconstruction__starman__subject_s406__tp_2.npy,406
+3,3,./data_starmen/anomaly_images/SimulatedData__Reconstruction__starman__subject_s406__tp_3.npy,406
+4,4,./data_starmen/anomaly_images/SimulatedData__Reconstruction__starman__subject_s406__tp_4.npy,406
+5,5,./data_starmen/anomaly_images/SimulatedData__Reconstruction__starman__subject_s406__tp_5.npy,406
+6,6,./data_starmen/anomaly_images/SimulatedData__Reconstruction__starman__subject_s406__tp_6.npy,406
+7,7,./data_starmen/anomaly_images/SimulatedData__Reconstruction__starman__subject_s406__tp_7.npy,406
+8,8,./data_starmen/anomaly_images/SimulatedData__Reconstruction__starman__subject_s406__tp_8.npy,406
+9,9,./data_starmen/anomaly_images/SimulatedData__Reconstruction__starman__subject_s406__tp_9.npy,406
