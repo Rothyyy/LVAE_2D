@@ -32,7 +32,7 @@ if __name__=="__main__":
     gamma = args.gamma
     longitudinal_iteration = 200
     nn_saving_path = f"saved_models_2D/CVAE2D_{latent_representation_size}_{beta}_{gamma}_{longitudinal_iteration}.pth"
-    longitudinal_saving_path = f"saved_models_2D/longitudinal_estimator_params_CVAE2D_{latent_representation_size}_{beta}_{gamma}_{longitudinal_iteration}.json"
+    # longitudinal_saving_path = f"saved_models_2D/longitudinal_estimator_params_CVAE2D_{latent_representation_size}_{beta}_{gamma}_{longitudinal_iteration}.json"
     # dataset_path = "./starmen_dataset.csv"      # Consider the whole dataset
     dataset_path = "./starmen_test_set.csv"   # Consider only the test set 
     df_dataset = pd.read_csv(dataset_path)
@@ -40,16 +40,16 @@ if __name__=="__main__":
 
     # Loading the models
     model = CVAE2D_ORIGINAL(latent_representation_size)
-    model.load_state_dict(torch.load(nn_saving_path + "2", map_location='cpu'))
-    saem_estimator = Leaspy.load(longitudinal_saving_path + "2")
+    model.load_state_dict(torch.load(nn_saving_path, map_location='cpu'))
+    # saem_estimator = Leaspy.load(longitudinal_saving_path + "2")
 
-    num_sample = 10
+    num_sample = 5
     random_patient = np.random.choice(df_dataset["subject_id"].unique(), num_sample, replace=False)
-    print(random_patient)
+    print("Chosen random subjects:", random_patient)
     for patient_id in random_patient:
-        display_individual_observations_2D(model, patient_id, dataset_path, 
-                                           fitted_longitudinal_estimator=saem_estimator,
-                                           save_path=f"{output_path}results_2D_subject{patient_id}_proj.pdf")
+        # display_individual_observations_2D(model, patient_id, dataset_path, 
+        #                                    fitted_longitudinal_estimator=saem_estimator,
+        #                                    save_path=f"{output_path}results_2D_subject{patient_id}_proj.pdf")
         display_individual_observations_2D(model, patient_id, dataset_path, 
                                            fitted_longitudinal_estimator=None,
                                            save_path=f"{output_path}results_2D_subject{patient_id}_noproj.pdf")
