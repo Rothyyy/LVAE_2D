@@ -59,7 +59,7 @@ if __name__ == "__main__":
             if to_csv:
                 row = {
                 "age": t ,  # TODO: What ages should we use ?
-                "image_path": f"./data_starmen/anomaly_images/SimulatedData__Reconstruction__starman__subject_s{subject}__tp_{t}.npy" ,
+                "image_path": f"./data_starmen/anomaly_images/{anomaly_image_name}" ,
                 "subject_id": str(subject)
             }
                 data.append(row)

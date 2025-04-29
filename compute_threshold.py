@@ -66,6 +66,7 @@ if __name__ == "__main__":
     model = CVAE2D_ORIGINAL(latent_dimension)
     model.load_state_dict(torch.load(nn_saving_path, map_location='cpu'))
     model.to(device)
+    model.training = False
 
     train_dataset = Dataset2D('starmen_train_set.csv', read_image=open_npy,transform=transformations)
     data_loader = DataLoader(train_dataset, batch_size=1, num_workers=num_worker, shuffle=True, pin_memory=True, )
@@ -98,6 +99,7 @@ if __name__ == "__main__":
     model = CVAE2D_ORIGINAL(latent_dimension)
     model.load_state_dict(torch.load(nn_saving_path + "2", map_location='cpu'))
     model.to(device)
+    model.training = False
     longitudinal_estimator = Leaspy.load(longitudinal_saving_path + "2")
 
 
