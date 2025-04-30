@@ -29,7 +29,7 @@ if __name__ == "__main__":
         for t in range(10):
             
             image_path = f"data_starmen/images/SimulatedData__Reconstruction__starman__subject_s{subject}__tp_{t}.npy"
-            anomaly_image_name = f"Anomaly__starman__subject_s{subject}__tp_{t}.npy"
+            anomaly_image_name = f"{anomaly}__starman__subject_s{subject}__tp_{t}.npy"
             save_path = f"data_starmen/anomaly_images/{anomaly_image_name}"
             image = np.load(image_path)
 
@@ -70,5 +70,5 @@ if __name__ == "__main__":
 
     # Saving the data in csv file
     data_df = pd.DataFrame(data)
-    data_df.to_csv("anomaly_starmen_dataset.csv")
+    data_df.to_csv(f"anomaly_{anomaly}_starmen_dataset.csv")
 

@@ -48,13 +48,22 @@ def get_longitudinal_images(data, model, fitted_longitudinal_estimator):
     return encodings, logvars, projected_images
 
 if __name__=="__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-a", "--anomaly", type=str, required=False, default="darker_circle")
+    args = parser.parse_args()
+
+    anomaly = args.anomaly
+    anomaly_list = ["darker_circle", "darker_line", "growing_circle"]
+    if anomaly not in anomaly_list:
+        print("Error, anomaly not found, select one of the following anomaly : 'darker_circle', 'darker_line', 'growing_circle' ")
+        exit()
 
     latent_dimension = 4
     num_workers = round(os.cpu_count()/6)
     device = "cuda" if torch.cuda.is_available() else "cpu"
 
     # Loading anomaly dataset
-    anomaly_dataset_path = "anomaly_starmen_dataset.csv"
+    anomaly_dataset_path = f"anomaly_{anomaly}_starmen_dataset.csv"
     dataset = Dataset2D(anomaly_dataset_path)
     data_loader = DataLoader(dataset, batch_size=1, num_workers=num_workers, pin_memory=True)
 
@@ -73,22 +82,26 @@ if __name__=="__main__":
     VAE_threshold_95 = threshold_dict["VAE_threshold_95"]
     VAE_threshold_99 = threshold_dict["VAE_threshold_99"]
 
+    num_images = 0
+    VAE_anomaly_detected_95 = 0
+    VAE_anomaly_detected_99 = 0
     with torch.no_grad():
         for images in data_loader:
             images = images.to(device)
             mu, logvar, recon_images, _ = model(images)
             reconstruction_loss, kl_loss = spatial_auto_encoder_loss(mu, logvar, recon_images, images)
-            print("VAE Reconstruction loss =", reconstruction_loss)
-            print("With threshold_95 :", reconstruction_loss > VAE_threshold_95)
-            print("With threshold_99 :", reconstruction_loss > VAE_threshold_99)
-            print()
-
+            num_images += 1     # We load images one by one
+            VAE_anomaly_detected_95 += torch.sum(reconstruction_loss > VAE_threshold_95).item()
+            VAE_anomaly_detected_99 += torch.sum(reconstruction_loss > VAE_threshold_99).item()
+            # print("VAE Reconstruction loss =", reconstruction_loss)
+            # print("With threshold_95 :", reconstruction_loss > VAE_threshold_95)
+            # print("With threshold_99 :", reconstruction_loss > VAE_threshold_99)
+            # print()
 
 
 
     # Loading anomaly dataset
     transformations = transforms.Compose([])
-    anomaly_dataset_path = "anomaly_starmen_dataset.csv"
     dataset = LongitudinalDataset2D(anomaly_dataset_path, read_image=open_npy,transform=transformations)
     data_loader = DataLoader(dataset, batch_size=1, num_workers=num_workers, pin_memory=True, collate_fn=longitudinal_collate_2D)
 
@@ -106,6 +119,8 @@ if __name__=="__main__":
     LVAE_threshold_95 = threshold_dict["LVAE_threshold_95"]
     LVAE_threshold_99 = threshold_dict["LVAE_threshold_99"]
 
+    LVAE_anomaly_detected_95 = 0
+    LVAE_anomaly_detected_99 = 0
     # TODO: How should we detect anomaly with longitudinal data ?
     with torch.no_grad():
         for data in data_loader:
@@ -113,10 +128,29 @@ if __name__=="__main__":
             mus, logvars, recon_x = get_longitudinal_images(data, model, longitudinal_estimator)
             for i in range(len(mus)):
                 reconstruction_loss, kl_loss = spatial_auto_encoder_loss(mus[i], logvars[i], recon_x[i], x[i])
-                print("LVAE Reconstruction loss =", reconstruction_loss)
-                print("With threshold_95 :", reconstruction_loss > LVAE_threshold_95)
-                print("With threshold_99 :", reconstruction_loss > LVAE_threshold_99)
-                print()
+                LVAE_anomaly_detected_95 += torch.sum(reconstruction_loss > VAE_threshold_95).item()
+                LVAE_anomaly_detected_99 += torch.sum(reconstruction_loss > VAE_threshold_99).item()
+                # print("LVAE Reconstruction loss =", reconstruction_loss)
+                # print("With threshold_95 :", reconstruction_loss > LVAE_threshold_95)
+                # print("With threshold_99 :", reconstruction_loss > LVAE_threshold_99)
+                # print()
+            
+            # reconstruction_loss, kl_loss = spatial_auto_encoder_loss(mus, logvars, recon_x, x)
+            # print("If we consider all images:")
+            # print("LVAE Reconstruction loss =", reconstruction_loss)
+            # print("With threshold_95 :", reconstruction_loss > LVAE_threshold_95)
+            # print("With threshold_99 :", reconstruction_loss > LVAE_threshold_99)
+            # print()
 
 
+
+    print(f"With VAE and {num_images} images:")
+    print(f"With threshold_95 we detect {VAE_anomaly_detected_95} anomaly.")
+    print(f"With threshold_99 we detect {VAE_anomaly_detected_99} anomaly.")
+    print()
+
+    print(f"With LVAE and {num_images} images:")
+    print(f"With threshold_95 we detect {LVAE_anomaly_detected_95} anomaly.")
+    print(f"With threshold_99 we detect {LVAE_anomaly_detected_99} anomaly.")
+    print()
 
