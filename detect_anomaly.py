@@ -83,6 +83,7 @@ if __name__=="__main__":
     VAE_threshold_99 = threshold_dict["VAE_threshold_99"]
 
     num_images = 0
+    # These two variables will count the total number of anomalous images detected 
     VAE_anomaly_detected_95 = 0
     VAE_anomaly_detected_99 = 0
     with torch.no_grad():
@@ -116,25 +117,39 @@ if __name__=="__main__":
     longitudinal_estimator = Leaspy.load(longitudinal_saving_path)
 
     # Loading LVAE thresholds
-    LVAE_threshold_95 = threshold_dict["LVAE_threshold_95"]
-    LVAE_threshold_99 = threshold_dict["LVAE_threshold_99"]
+    LVAE_threshold_95 = threshold_dict["VAE_threshold_95"]
+    LVAE_threshold_99 = threshold_dict["VAE_threshold_99"]
 
+    # These two variables will count the total number of anomalous images detected 
     LVAE_anomaly_detected_95 = 0
     LVAE_anomaly_detected_99 = 0
+
+    # These two variables will be used to know which images isn't classified as anomalous
+    LVAE_anomaly_error_95 = torch.zeros((10,10))
+    LVAE_anomaly_error_99 = torch.zeros((10,10))
+
     # TODO: How should we detect anomaly with longitudinal data ?
     with torch.no_grad():
+        j = -1
         for data in data_loader:
+            j += 1
             x = data[0]
             mus, logvars, recon_x = get_longitudinal_images(data, model, longitudinal_estimator)
             for i in range(len(mus)):
                 reconstruction_loss, kl_loss = spatial_auto_encoder_loss(mus[i], logvars[i], recon_x[i], x[i])
-                LVAE_anomaly_detected_95 += torch.sum(reconstruction_loss > VAE_threshold_95).item()
-                LVAE_anomaly_detected_99 += torch.sum(reconstruction_loss > VAE_threshold_99).item()
+
+                sum_loss_95 = reconstruction_loss > LVAE_threshold_95
+                LVAE_anomaly_error_95[j,i] += not(sum_loss_95)
+                sum_loss_99 = reconstruction_loss > LVAE_threshold_99
+                LVAE_anomaly_error_99[j,i] += not(sum_loss_99)
+
+                LVAE_anomaly_detected_95 += torch.sum(sum_loss_95).item()
+                LVAE_anomaly_detected_99 += torch.sum(sum_loss_99).item()
                 # print("LVAE Reconstruction loss =", reconstruction_loss)
                 # print("With threshold_95 :", reconstruction_loss > LVAE_threshold_95)
                 # print("With threshold_99 :", reconstruction_loss > LVAE_threshold_99)
                 # print()
-            
+
             # reconstruction_loss, kl_loss = spatial_auto_encoder_loss(mus, logvars, recon_x, x)
             # print("If we consider all images:")
             # print("LVAE Reconstruction loss =", reconstruction_loss)
@@ -143,7 +158,7 @@ if __name__=="__main__":
             # print()
 
 
-
+    print()
     print(f"With VAE and {num_images} images:")
     print(f"With threshold_95 we detect {VAE_anomaly_detected_95} anomaly.")
     print(f"With threshold_99 we detect {VAE_anomaly_detected_99} anomaly.")
@@ -152,5 +167,9 @@ if __name__=="__main__":
     print(f"With LVAE and {num_images} images:")
     print(f"With threshold_95 we detect {LVAE_anomaly_detected_95} anomaly.")
     print(f"With threshold_99 we detect {LVAE_anomaly_detected_99} anomaly.")
+    print("With threshold_95, the errors are obtained here :")
+    print(LVAE_anomaly_error_95)
+    print("With threshold_99, the errors are obtained here :")
+    print(LVAE_anomaly_error_95)
     print()
 

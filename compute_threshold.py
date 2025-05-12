@@ -88,6 +88,7 @@ if __name__ == "__main__":
     all_losses = np.array(all_losses)
     VAE_threshold_95 = np.percentile(all_losses, 95)
     VAE_threshold_99 = np.percentile(all_losses, 99)
+    VAE_median = np.median(all_losses)
     VAE_losses_min = all_losses.min()
     VAE_losses_max = all_losses.max()
     VAE_losses_mean = all_losses.mean()
@@ -120,6 +121,7 @@ if __name__ == "__main__":
     all_losses = np.array(all_losses)
     LVAE_threshold_95 = np.percentile(all_losses, 95)
     LVAE_threshold_99 = np.percentile(all_losses, 99)
+    LVAE_median = np.median(all_losses)
     LVAE_losses_min = all_losses.min()
     LVAE_losses_max = all_losses.max()
     LVAE_losses_mean = all_losses.mean()
@@ -131,6 +133,7 @@ if __name__ == "__main__":
     print("min =", VAE_losses_min)
     print("max =", VAE_losses_max)
     print("mean =", VAE_losses_mean)
+    print("median =", VAE_median)
     print("95th percentile =", VAE_threshold_95)
     print("99th percentile =", VAE_threshold_99)
 
@@ -140,6 +143,9 @@ if __name__ == "__main__":
     print("min =", LVAE_losses_min)
     print("max =", LVAE_losses_max)
     print("mean =", LVAE_losses_mean)
+    print("median =", LVAE_median)
+    print("Number above VAE_95 =", np.sum(all_losses > VAE_threshold_95))
+    print("90th percentile =", np.percentile(all_losses, 90))
     print("95th percentile =", LVAE_threshold_95)
     print("99th percentile =", LVAE_threshold_99)
 
