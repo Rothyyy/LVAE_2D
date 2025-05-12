@@ -14,7 +14,7 @@ from utils_display.display_individual_observations_2D import display_individual_
 if __name__=="__main__":
     # argparse
     parser = argparse.ArgumentParser()
-    parser.add_argument('--data', type=str, required=False, default="./starmen_dataset.csv",
+    parser.add_argument('--data', type=str, required=False, default="./data_csv/starmen_dataset.csv",
                         help='csv file path')
     parser.add_argument('--nnmodel_name', type=str, required=False, default='CVAE2D',
                         help='Name of the NN model that will be used')
@@ -33,8 +33,8 @@ if __name__=="__main__":
     longitudinal_iteration = 200
     nn_saving_path = f"saved_models_2D/CVAE2D_{latent_representation_size}_{beta}_{gamma}_{longitudinal_iteration}.pth"
     longitudinal_saving_path = f"saved_models_2D/longitudinal_estimator_params_CVAE2D_{latent_representation_size}_{beta}_{gamma}_{longitudinal_iteration}.json"
-    # dataset_path = "./starmen_dataset.csv"      # Consider the whole dataset
-    dataset_path = "./starmen_test_set.csv"   # Consider only the test set 
+    # dataset_path = "./data_csv/starmen_dataset.csv"      # Consider the whole dataset
+    dataset_path = "./data_csv/starmen_test_set.csv"   # Consider only the test set 
     df_dataset = pd.read_csv(dataset_path)
     output_path = f"results_reconstruction/CVAE2D_{latent_representation_size}_{beta}_{gamma}_{longitudinal_iteration}/"
 

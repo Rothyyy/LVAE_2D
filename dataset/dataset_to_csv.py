@@ -18,7 +18,7 @@ if __name__=="__main__":
             data.append(row)
 
     data_df = pd.DataFrame(data)
-    data_df.to_csv("starmen_dataset.csv")
+    data_df.to_csv("data_csv/starmen_dataset.csv")
 
 
 

@@ -68,7 +68,7 @@ if __name__ == "__main__":
     model.to(device)
     model.training = False
 
-    train_dataset = Dataset2D('starmen_train_set.csv', read_image=open_npy,transform=transformations)
+    train_dataset = Dataset2D('data_csv/starmen_train_set.csv', read_image=open_npy,transform=transformations)
     data_loader = DataLoader(train_dataset, batch_size=1, num_workers=num_worker, shuffle=True, pin_memory=True, )
     all_losses = []
 
@@ -103,7 +103,7 @@ if __name__ == "__main__":
     longitudinal_estimator = Leaspy.load(longitudinal_saving_path + "2")
 
 
-    train_dataset = LongitudinalDataset2D('starmen_train_set.csv', read_image=open_npy, transform=transformations)
+    train_dataset = LongitudinalDataset2D('data_csv/starmen_train_set.csv', read_image=open_npy, transform=transformations)
     data_loader = DataLoader(train_dataset, batch_size=1, num_workers=num_worker, shuffle=False, collate_fn=longitudinal_collate_2D)
     all_losses = []
 
@@ -152,5 +152,5 @@ if __name__ == "__main__":
     threshold_dict["LVAE_threshold_99"] = LVAE_threshold_99
 
 
-    with open('anomaly_threshold.json', 'w') as f:
+    with open('data_csv/anomaly_threshold.json', 'w') as f:
         json.dump(threshold_dict, f, ensure_ascii=False)

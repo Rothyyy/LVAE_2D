@@ -70,5 +70,5 @@ if __name__ == "__main__":
 
     # Saving the data in csv file
     data_df = pd.DataFrame(data)
-    data_df.to_csv(f"anomaly_{anomaly}_starmen_dataset.csv")
+    data_df.to_csv(f"data_csv/anomaly_{anomaly}_starmen_dataset.csv")
 

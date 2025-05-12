@@ -24,7 +24,7 @@ from nnModels.train_AE import train_AE
 Script to train the full model. Neural network model + longitudinal estimator
 """
 parser = argparse.ArgumentParser()
-parser.add_argument('--data', type=str, required=False, default="./starmen_dataset.csv",
+parser.add_argument('--data', type=str, required=False, default="./data_csv/starmen_dataset.csv",
                     help='csv file path')
 parser.add_argument('--nnmodel_name', type=str, required=False, default='CVAE2D',
                     help='Name of the NN model that will be used')
@@ -52,15 +52,15 @@ args = parser.parse_args()
 
 # First we get the different train/validation/test dataset
 df = pd.read_csv(args.data)
-if not(os.path.isfile("starmen_train_set.csv")) and not(os.path.isfile("starmen_test_set.csv")) and not(os.path.isfile("starmen_validation_set.csv")):
+if not(os.path.isfile("data_csv/starmen_train_set.csv")) and not(os.path.isfile("data_csv/starmen_test_set.csv")) and not(os.path.isfile("data_csv/starmen_validation_set.csv")):
     # Split the data into train (80%) and test (20%) sets
     train_val_df, test_df = group_based_train_test_split(df, test_size=0.2, group_col='subject_id', random_state=42)
     train_df, validation_df = group_based_train_test_split(train_val_df, test_size=0.125, group_col='subject_id', random_state=42)
     # Save the training set to a CSV file
-    train_df.to_csv('starmen_train_set.csv', index=False)
-    validation_df.to_csv('starmen_validation_set.csv', index=False)
+    train_df.to_csv('data_csv/starmen_train_set.csv', index=False)
+    validation_df.to_csv('data_csv/starmen_validation_set.csv', index=False)
     # Save the test set to a CSV file
-    test_df.to_csv('starmen_test_set.csv', index=False)
+    test_df.to_csv('data_csv/starmen_test_set.csv', index=False)
 
 ###  Hyperparameters of the Variational autoencoder model
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
@@ -115,9 +115,9 @@ os.makedirs(os.path.dirname(output_path), exist_ok=True)
 
 
 # Training of the vanilla VAE
-validation_dataset = Dataset2D('starmen_validation_set.csv', read_image=open_npy,
+validation_dataset = Dataset2D('data_csv/starmen_validation_set.csv', read_image=open_npy,
                                    transform=transformations)
-easy_dataset = Dataset2D('starmen_train_set.csv', read_image=open_npy,
+easy_dataset = Dataset2D('data_csv/starmen_train_set.csv', read_image=open_npy,
                          transform=transformations)
 
 data_loader = DataLoader(easy_dataset, batch_size=batch_size, num_workers=num_worker, shuffle=True, pin_memory=True, )
@@ -143,9 +143,9 @@ plt.show()
 model.load_state_dict(torch.load(nn_saving_path, map_location='cpu'))
 model.freeze_conv()
 best_loss = 1e15
-validation_dataset = LongitudinalDataset2D('starmen_validation_set.csv', read_image=open_npy,
+validation_dataset = LongitudinalDataset2D('data_csv/starmen_validation_set.csv', read_image=open_npy,
                                            transform=transformations)
-easy_dataset = LongitudinalDataset2D('starmen_train_set.csv', read_image=open_npy,
+easy_dataset = LongitudinalDataset2D('data_csv/starmen_train_set.csv', read_image=open_npy,
                                      transform=transformations)
 
 data_loader = DataLoader(easy_dataset, batch_size=batch_size, num_workers=num_worker, shuffle=False,
@@ -173,9 +173,9 @@ results_estimator, _ = fit_longitudinal_estimator_on_nn(data_loader, model, devi
                                                         algo_settings)
 results_estimator.save(longitudinal_saving_path + "2")
 
-display_individual_observations_2D(model, 9, './starmen_dataset.csv',
+display_individual_observations_2D(model, 9, './data_csv/starmen_dataset.csv',
                                            fitted_longitudinal_estimator=results_estimator,
                                            save_path=f"{output_path}results_2D_subject9_proj.pdf")
-display_individual_observations_2D(model, 9, './starmen_dataset.csv',
+display_individual_observations_2D(model, 9, './data_csv/starmen_dataset.csv',
                                            fitted_longitudinal_estimator=None,
                                            save_path=f"{output_path}results_2D_subject9_noproj.pdf")

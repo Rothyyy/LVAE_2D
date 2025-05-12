@@ -63,7 +63,7 @@ if __name__=="__main__":
     device = "cuda" if torch.cuda.is_available() else "cpu"
 
     # Loading anomaly dataset
-    anomaly_dataset_path = f"anomaly_{anomaly}_starmen_dataset.csv"
+    anomaly_dataset_path = f"data_csv/anomaly_{anomaly}_starmen_dataset.csv"
     dataset = Dataset2D(anomaly_dataset_path)
     data_loader = DataLoader(dataset, batch_size=1, num_workers=num_workers, pin_memory=True)
 
@@ -76,7 +76,7 @@ if __name__=="__main__":
 
 
     # Loading thresholds
-    threshold_path = "anomaly_threshold.json"
+    threshold_path = "data_csv/anomaly_threshold.json"
     with open(threshold_path) as json_file:
         threshold_dict = json.load(json_file)
     VAE_threshold_95 = threshold_dict["VAE_threshold_95"]
