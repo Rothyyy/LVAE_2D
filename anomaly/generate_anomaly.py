@@ -23,8 +23,11 @@ if __name__ == "__main__":
     random_subject = np.random.choice(1000, size=n_sample, replace=False)
     to_csv = args.csv
     data = []
+    f = open("data_starmen/path_to_visit_ages_file.txt", "r")
+    ages_list = f.read().split()
 
     for subject in random_subject:
+        ages = np.array(ages_list[subject*10 : subject*10+10]).astype(float)
 
         for t in range(10):
             
@@ -49,16 +52,22 @@ if __name__ == "__main__":
 
             # Add the anomaly
             if anomaly == "growing_circle":
-                cv2.circle(image_uint8, contours[leftmost_position], t, (255,255,255), -1)
+                cv2.circle(image_uint8, contours[leftmost_position], round(ages[t]-ages[0]), (255,255,255), -1)
             if anomaly == "darker_circle":
-                cv2.circle(image_uint8, contours[leftmost_position], 1, (max(0, 200-20*t),max(0, 200-20*t),max(0, 200-20*t)), -1)
+                cv2.circle(image_uint8, contours[leftmost_position], 1, 
+                           (max(0, 200-20*round(ages[t]-ages[0])),
+                            max(0, 200-20*round(ages[t]-ages[0])),
+                            max(0, 200-20*round(ages[t]-ages[0]))), -1)
             if anomaly == "darker_line":
-                cv2.line(image_uint8, contours[leftmost_position], contours[leftmost_position] + 3, ((max(0, 200-20*t),max(0, 200-20*t),max(0, 200-20*t))), 1)
+                cv2.line(image_uint8, contours[leftmost_position], contours[leftmost_position] + 3,     # TODO: Maybe consider better line position ?
+                         ((max(0, 200-20*round(ages[t]-ages[0])),
+                           max(0, 200-20*round(ages[t]-ages[0])),
+                           max(0, 200-20*round(ages[t]-ages[0])))), 1)
 
             # Create the data that will be used for anomaly detection
             if to_csv:
                 row = {
-                "age": t ,  # TODO: What ages should we use ?
+                "age": ages[t] , 
                 "image_path": f"./data_starmen/anomaly_images/{anomaly_image_name}" ,
                 "subject_id": str(subject)
             }
