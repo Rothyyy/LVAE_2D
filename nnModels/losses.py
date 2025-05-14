@@ -22,6 +22,14 @@ def spatial_2D_auto_encoder_loss(mu, logVar, reconstructed, input_):
     return recon_error, kl_divergence
 
 
+def pixel_reconstruction_error(mu, logVar, reconstructed, input):
+    """
+    Assume that input and reconstructed are 1 image (not a batch of images).
+    """
+    recon_error = torch.abs(input - reconstructed).flatten().numpy()
+    return recon_error, None
+
+
 def loss_bvae(recon_x, x, mu, logvar, beta):
     batch_size = x.size(0)
     bce = F.binary_cross_entropy(recon_x, x, size_average=False).div(batch_size)

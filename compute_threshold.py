@@ -13,7 +13,7 @@ from dataset.Dataset2D import Dataset2D
 from longitudinalModel.fit_longitudinal_estimator_on_nn import fit_longitudinal_estimator_on_nn
 
 from nnModels.CVAE2D_ORIGINAL import CVAE2D_ORIGINAL
-from nnModels.losses import spatial_auto_encoder_loss
+from nnModels.losses import spatial_auto_encoder_loss, pixel_reconstruction_error
 
 from utils_display.display_individual_observations_2D import project_encodings_for_results
 from dataset.LongitudinalDataset2D import LongitudinalDataset2D, longitudinal_collate_2D
@@ -50,11 +50,23 @@ def get_longitudinal_images(data, model, fitted_longitudinal_estimator):
                                                                                 fitted_longitudinal_estimator,
                                                                                 projection_timepoints)
     projected_images = model.decoder(torch.tensor(predicted_latent_variables[str(subject_id)]).to(device))
-    return encodings, logvars, projected_images
+    # return encodings, logvars, projected_images
+    
+    return torch.from_numpy(predicted_latent_variables[str(subject_id)]), logvars, projected_images
 
 
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-l", "--loss_input", type=str, required=False, default="pixel")
+    args = parser.parse_args()
+
+    loss_input = args.loss_input
+    if loss_input == "image":
+        loss_function = spatial_auto_encoder_loss
+    else:
+        loss_function = pixel_reconstruction_error
+
     # Loading the VAE model
     latent_dimension = 4
     num_worker = round(os.cpu_count()/6)
@@ -77,15 +89,15 @@ if __name__ == "__main__":
         model.eval()
         for x in data_loader:
             x = x.to(device)
-            
+
             mu, logvar, recon_x, _ = model(x)
-            reconstruction_loss, kl_loss = spatial_auto_encoder_loss(mu, logvar, recon_x, x)
+            reconstruction_loss, kl_loss = loss_function(mu, logvar, recon_x, x)
 
             # loss = reconstruction_loss + kl_loss
             loss = reconstruction_loss
             all_losses.append(loss)
     
-    all_losses = np.array(all_losses)
+    all_losses = np.array(all_losses).flatten()
     VAE_threshold_95 = np.percentile(all_losses, 95)
     VAE_threshold_99 = np.percentile(all_losses, 99)
     VAE_median = np.median(all_losses)
@@ -114,11 +126,12 @@ if __name__ == "__main__":
             x = data[0]
             mus, logvars, recon_x = get_longitudinal_images(data, model, longitudinal_estimator)
             for i in range(len(mus)):
-                reconstruction_loss, kl_loss = spatial_auto_encoder_loss(mus[i], logvars[i], recon_x[i], x[i])
+                reconstruction_loss, kl_loss = loss_function(mus[i], logvars[i], recon_x[i], x[i])
                 all_losses.append(reconstruction_loss)
 
 
-    all_losses = np.array(all_losses)
+    all_losses = np.array(all_losses).flatten()
+    LVAE_threshold_90 = np.percentile(all_losses, 90)
     LVAE_threshold_95 = np.percentile(all_losses, 95)
     LVAE_threshold_99 = np.percentile(all_losses, 99)
     LVAE_median = np.median(all_losses)
@@ -144,8 +157,8 @@ if __name__ == "__main__":
     print("max =", LVAE_losses_max)
     print("mean =", LVAE_losses_mean)
     print("median =", LVAE_median)
-    print("Number above VAE_95 =", np.sum(all_losses > VAE_threshold_95))
-    print("90th percentile =", np.percentile(all_losses, 90))
+    print(f"Number of {loss_input} above VAE_95 =", np.sum(all_losses > VAE_threshold_95))
+    print("90th percentile =", LVAE_threshold_90)
     print("95th percentile =", LVAE_threshold_95)
     print("99th percentile =", LVAE_threshold_99)
 
@@ -158,5 +171,5 @@ if __name__ == "__main__":
     threshold_dict["LVAE_threshold_99"] = LVAE_threshold_99
 
 
-    with open('data_csv/anomaly_threshold.json', 'w') as f:
+    with open(f'data_csv/anomaly_threshold_{loss_input}.json', 'w') as f:
         json.dump(threshold_dict, f, ensure_ascii=False)
