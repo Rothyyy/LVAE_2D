@@ -93,7 +93,8 @@ if __name__ == "__main__":
             mu, logvar, recon_x, _ = model(x)
             reconstruction_loss, kl_loss = loss_function(mu, logvar, recon_x, x)
 
-            # loss = reconstruction_loss + kl_loss
+            if loss_input == "pixel":
+                reconstruction_loss = reconstruction_loss.numpy()
             loss = reconstruction_loss
             all_losses.append(loss)
     
@@ -127,6 +128,8 @@ if __name__ == "__main__":
             mus, logvars, recon_x = get_longitudinal_images(data, model, longitudinal_estimator)
             for i in range(len(mus)):
                 reconstruction_loss, kl_loss = loss_function(mus[i], logvars[i], recon_x[i], x[i])
+                if loss_input == "pixel":
+                    reconstruction_loss = reconstruction_loss.numpy()
                 all_losses.append(reconstruction_loss)
 
 

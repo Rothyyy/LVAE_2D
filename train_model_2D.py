@@ -110,7 +110,7 @@ def open_npy(path):
 #     os.unlink(file_path)
 
 
-output_path = f"outputs_reconstruction/{args.nnmodel_name}_{temp_args.dimension}_{temp_args.beta}_{temp_args.gamma}_{args.iterations}/"
+output_path = f"training_plots/{args.nnmodel_name}_{temp_args.dimension}_{temp_args.beta}_{temp_args.gamma}_{args.iterations}/"
 os.makedirs(os.path.dirname(output_path), exist_ok=True)
 
 
