@@ -55,6 +55,41 @@ def get_longitudinal_images(data, model, fitted_longitudinal_estimator):
     return torch.from_numpy(predicted_latent_variables[str(subject_id)]), logvars, projected_images
 
 
+def compute_stats(all_losses, model, method):
+    # If necessary we first transform to numpy array and flatten the list
+    
+    if type(all_losses) == torch.Tensor:
+        all_losses = all_losses.numpy()
+    elif type(all_losses) == list:
+        all_losses = np.array(all_losses)
+    if len(all_losses.shape) > 1 and method != "pixel_all":
+        all_losses = all_losses.flatten()
+    if method == "pixel_all":
+        loss_shape = all_losses.shape
+        all_losses = all_losses.reshape(loss_shape[0], 64, 64)  # The starmen images have shape 64x64
+
+    # Convert to np.float64 to save stats in json file
+    all_losses = all_losses.astype(np.float64)
+
+    stats_dict = {}
+    if method != "pixel_all":
+        stats_dict[f"{model}_threshold_95"] = np.percentile(all_losses, 95)
+        stats_dict[f"{model}_threshold_99"] = np.percentile(all_losses, 99)
+        stats_dict[f"{model}_median"] = np.median(all_losses)
+        stats_dict[f"{model}_min"] = np.min(all_losses)
+        stats_dict[f"{model}_max"] = np.max(all_losses)
+        stats_dict[f"{model}_mean"] = np.mean(all_losses)
+
+    else: 
+        stats_dict[f"{model}_threshold_95"] = np.percentile(all_losses, 95, axis=0).tolist()
+        stats_dict[f"{model}_threshold_99"] = np.percentile(all_losses, 99, axis=0).tolist()
+        stats_dict[f"{model}_median"] = np.median(all_losses, axis=0).tolist()
+        stats_dict[f"{model}_min"] = np.min(all_losses, axis=0).tolist()
+        stats_dict[f"{model}_max"] = np.max(all_losses, axis=0).tolist()
+        stats_dict[f"{model}_mean"] = np.mean(all_losses, axis=0).tolist()
+    return stats_dict
+
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -64,10 +99,14 @@ if __name__ == "__main__":
     loss_input = args.loss_input
     if loss_input == "image":
         loss_function = spatial_auto_encoder_loss
-    else:
+    elif loss_input == "pixel" or loss_input == "pixel_all":
         loss_function = pixel_reconstruction_error
+    else:
+        print("Error in the input_loss, select one among the following : ['image', 'pixel', 'pixel_all]")
+        exit()
+    stats_dict = {}
 
-    # Loading the VAE model
+    # Setting some parameters
     latent_dimension = 4
     num_worker = round(os.cpu_count()/6)
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
@@ -75,6 +114,9 @@ if __name__ == "__main__":
     nn_saving_path = f"saved_models_2D/CVAE2D_4_5_100_200.pth"
     longitudinal_saving_path = f"saved_models_2D/longitudinal_estimator_params_CVAE2D_4_5_100_200.json"
 
+    ##### LAUNCHING COMPUTATION FOR VAE #####
+
+    # Loading the VAE mode
     model = CVAE2D_ORIGINAL(latent_dimension)
     model.load_state_dict(torch.load(nn_saving_path, map_location='cpu'))
     model.to(device)
@@ -93,21 +135,15 @@ if __name__ == "__main__":
             mu, logvar, recon_x, _ = model(x)
             reconstruction_loss, kl_loss = loss_function(mu, logvar, recon_x, x)
 
-            if loss_input == "pixel":
-                reconstruction_loss = reconstruction_loss.numpy()
             loss = reconstruction_loss
             all_losses.append(loss)
     
-    all_losses = np.array(all_losses).flatten()
-    VAE_threshold_95 = np.percentile(all_losses, 95)
-    VAE_threshold_99 = np.percentile(all_losses, 99)
-    VAE_median = np.median(all_losses)
-    VAE_losses_min = all_losses.min()
-    VAE_losses_max = all_losses.max()
-    VAE_losses_mean = all_losses.mean()
+    stats_dict.update(compute_stats(all_losses, "VAE", loss_input))
 
 
 
+
+    ##### LAUNCHING COMPUTATION FOR LVAE #####
 
     # Loading the longitudinal model
     model = CVAE2D_ORIGINAL(latent_dimension)
@@ -129,50 +165,37 @@ if __name__ == "__main__":
             for i in range(len(mus)):
                 reconstruction_loss, kl_loss = loss_function(mus[i], logvars[i], recon_x[i], x[i])
                 if loss_input == "pixel":
-                    reconstruction_loss = reconstruction_loss.numpy()
+                    reconstruction_loss = reconstruction_loss.flatten()
+
                 all_losses.append(reconstruction_loss)
 
-
-    all_losses = np.array(all_losses).flatten()
-    LVAE_threshold_90 = np.percentile(all_losses, 90)
-    LVAE_threshold_95 = np.percentile(all_losses, 95)
-    LVAE_threshold_99 = np.percentile(all_losses, 99)
-    LVAE_median = np.median(all_losses)
-    LVAE_losses_min = all_losses.min()
-    LVAE_losses_max = all_losses.max()
-    LVAE_losses_mean = all_losses.mean()
+    stats_dict.update(compute_stats(all_losses, "LVAE", loss_input))
 
 
     # Printing some stats
-    print()
-    print("Stats for VAE losses :")
-    print("min =", VAE_losses_min)
-    print("max =", VAE_losses_max)
-    print("mean =", VAE_losses_mean)
-    print("median =", VAE_median)
-    print("95th percentile =", VAE_threshold_95)
-    print("99th percentile =", VAE_threshold_99)
+    if loss_input != "pixel_all":
+        print()
+        print("Stats for VAE losses :")
+        print("min =", stats_dict["VAE_min"])
+        print("max =", stats_dict["VAE_max"])
+        print("mean =", stats_dict["VAE_mean"])
+        print("median =", stats_dict["VAE_median"])
+        print("95th percentile =", stats_dict["VAE_threshold_95"])
+        print("99th percentile =", stats_dict["VAE_threshold_99"])
 
-    print()
-     
-    print("Stats for LVAE losses :")
-    print("min =", LVAE_losses_min)
-    print("max =", LVAE_losses_max)
-    print("mean =", LVAE_losses_mean)
-    print("median =", LVAE_median)
-    print(f"Number of {loss_input} above VAE_95 =", np.sum(all_losses > VAE_threshold_95))
-    print("90th percentile =", LVAE_threshold_90)
-    print("95th percentile =", LVAE_threshold_95)
-    print("99th percentile =", LVAE_threshold_99)
+        print()
+        
+        print("Stats for LVAE losses :")
+        print("min =", stats_dict["LVAE_min"])
+        print("max =", stats_dict["LVAE_max"])
+        print("mean =", stats_dict["LVAE_mean"])
+        print("median =", stats_dict["LVAE_median"])
+        print(f"Number of {loss_input} above VAE_95 =", np.sum(all_losses > stats_dict["VAE_threshold_95"]))
+        print("95th percentile =", stats_dict["VAE_threshold_95"])
+        print("99th percentile =", stats_dict["VAE_threshold_99"])
 
+        print("dict =", stats_dict) 
 
-    # Saving the obtained threshold
-    threshold_dict = {}
-    threshold_dict["VAE_threshold_95"] = VAE_threshold_95
-    threshold_dict["VAE_threshold_99"] = VAE_threshold_99
-    threshold_dict["LVAE_threshold_95"] = LVAE_threshold_95
-    threshold_dict["LVAE_threshold_99"] = LVAE_threshold_99
-
-
+    # Saving the stats dictionnary in a json file
     with open(f'data_csv/anomaly_threshold_{loss_input}.json', 'w') as f:
-        json.dump(threshold_dict, f, ensure_ascii=False)
+        json.dump(stats_dict, f, ensure_ascii=False)

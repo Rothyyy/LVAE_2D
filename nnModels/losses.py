@@ -26,7 +26,7 @@ def pixel_reconstruction_error(mu, logVar, reconstructed, input):
     """
     Assume that input and reconstructed are 1 image (not a batch of images).
     """
-    recon_error = torch.abs(input - reconstructed).flatten()
+    recon_error = torch.abs(input - reconstructed)
     return recon_error, None
 
 
