@@ -22,12 +22,19 @@ def spatial_2D_auto_encoder_loss(mu, logVar, reconstructed, input_):
     return recon_error, kl_divergence
 
 
-def pixel_reconstruction_error(mu, logVar, reconstructed, input):
+def image_reconstruction_error(reconstructed, input, method):
+    recon_error = torch.sum((reconstructed - input) ** 2)
+    return recon_error
+
+
+def pixel_reconstruction_error(reconstructed, input, method):
     """
     Assume that input and reconstructed are 1 image (not a batch of images).
     """
     recon_error = torch.abs(input - reconstructed)
-    return recon_error, None
+    if method == "pixel":
+        recon_error = recon_error.flatten()
+    return recon_error
 
 
 def loss_bvae(recon_x, x, mu, logvar, beta):
