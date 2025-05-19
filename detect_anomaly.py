@@ -91,7 +91,7 @@ def plot_anomaly_bar(array_anomaly_detected, model_name, anomaly_type, method, n
     This function will plot bars corresponding to the number of time the model detect
     an anomaly for the i-th image of a subject.
     """
-    save_path = f"anomaly/figure_reconstruction/bar_plots/{model_name}_{method}_{anomaly_type}_bar_plot"
+    save_path = f"anomaly/figure_reconstruction/bar_plots/{anomaly_type}/{model_name}_{method}_{anomaly_type}_bar_plot"
     x = np.array([i for i in range(1, 11)])
     color = "tab:blue" if model_name=="VAE" else "tab:orange"
 
@@ -101,6 +101,7 @@ def plot_anomaly_bar(array_anomaly_detected, model_name, anomaly_type, method, n
     ax.set_ylabel('Count')
     ax.set_title(f'Anomaly detected in images ({int(num_images/10)} images per timestamp)')
     ax.set_xticks(x)
+    ax.set_ylim(0, int(num_images/10)+1)
     plt.tight_layout()
 
     plt.savefig(save_path+".pdf")
