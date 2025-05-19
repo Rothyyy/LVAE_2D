@@ -59,9 +59,10 @@ def plot_anomaly(model_name, original_image, reconstructed_image, id, anomaly_ty
 
     # Compute the residual and binary mask
     if method == "image":
-        residual_images = original_image - reconstructed_image
-        threshold = 0.25
-        binary_mask = (residual_images > threshold).to(torch.uint8)
+        
+        residual_images = torch.abs(original_image - reconstructed_image)
+        mask_threshold = 0.15
+        binary_mask = (residual_images > mask_threshold).to(torch.uint8)
 
     fig_width = original_image.shape[0] * 10
     fig_height = 50  # Adjust as needed
