@@ -13,7 +13,7 @@ from dataset.Dataset2D import Dataset2D
 from longitudinalModel.fit_longitudinal_estimator_on_nn import fit_longitudinal_estimator_on_nn
 
 from nnModels.CVAE2D_ORIGINAL import CVAE2D_ORIGINAL
-from nnModels.losses import spatial_auto_encoder_loss, pixel_reconstruction_error
+from nnModels.losses import image_reconstruction_error, pixel_reconstruction_error
 
 from utils_display.display_individual_observations_2D import project_encodings_for_results
 from dataset.LongitudinalDataset2D import LongitudinalDataset2D, longitudinal_collate_2D
@@ -90,6 +90,44 @@ def compute_stats(all_losses, model, method):
     return stats_dict
 
 
+def plot_recon_error_histogram(recon_error_list, model_name, method):
+    save_path = f"anomaly/figure_reconstruction/recon_error/{model_name}_{method}"
+    color = "tab:blue" if model_name=="VAE" else "tab:orange"
+
+    if len(recon_error_list.shape) > 1:
+        recon_error_list = recon_error_list.flatten() 
+
+    fig, ax = plt.subplots()
+    counts, bin_edges, patches = ax.hist(recon_error_list, color=color, edgecolor='black')
+
+    # Create custom bin labels and set ticks
+    if method == "image":
+        bin_labels = [f'{int(bin_edges[i])}-{int(bin_edges[i+1])}' for i in range(len(bin_edges) - 1)]
+    else:
+        bin_labels = [f'{int(bin_edges[i] * 255)}-{int(bin_edges[i+1] * 255)}' for i in range(len(bin_edges) - 1)]
+    
+    bin_centers = 0.5 * (bin_edges[:-1] + bin_edges[1:])
+    ax.set_xticks(bin_centers)
+    ax.set_xticklabels(bin_labels, rotation=45)
+
+    # Add counts on top of each bar
+    for count, x in zip(counts, bin_centers):
+        ax.text(x, count + 0.008 * max(counts), str(int(count)), ha='center', va='bottom', fontsize=10)
+
+
+
+    # Add axis labels and title
+    ax.set_xlabel('Reconstruction error range')
+    ax.set_ylabel('Count')
+    ax.set_title(f'Reconstruction errors value when considering {method} with {model_name}')
+
+    # Layout fix
+    fig.tight_layout()
+    plt.savefig(save_path+".pdf")
+    plt.close(fig)
+
+    return 
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -98,7 +136,7 @@ if __name__ == "__main__":
 
     loss_input = args.loss_input
     if loss_input == "image":
-        loss_function = spatial_auto_encoder_loss
+        loss_function = image_reconstruction_error
     elif loss_input == "pixel" or loss_input == "pixel_all":
         loss_function = pixel_reconstruction_error
     else:
@@ -133,13 +171,14 @@ if __name__ == "__main__":
             x = x.to(device)
 
             mu, logvar, recon_x, _ = model(x)
-            reconstruction_loss, kl_loss = loss_function(mu, logvar, recon_x, x)
+            reconstruction_loss = loss_function(recon_x, x, loss_input)
 
             loss = reconstruction_loss
             all_losses.append(loss)
     
     stats_dict.update(compute_stats(all_losses, "VAE", loss_input))
-
+    if loss_input != "pixel_all":
+        plot_recon_error_histogram(np.array(all_losses), "VAE", loss_input)
 
 
 
@@ -163,13 +202,15 @@ if __name__ == "__main__":
             x = data[0]
             mus, logvars, recon_x = get_longitudinal_images(data, model, longitudinal_estimator)
             for i in range(len(mus)):
-                reconstruction_loss, kl_loss = loss_function(mus[i], logvars[i], recon_x[i], x[i])
+                reconstruction_loss = loss_function(recon_x[i], x[i], loss_input)
                 if loss_input == "pixel":
                     reconstruction_loss = reconstruction_loss.flatten()
 
                 all_losses.append(reconstruction_loss)
 
     stats_dict.update(compute_stats(all_losses, "LVAE", loss_input))
+    if loss_input != "pixel_all":
+        plot_recon_error_histogram(np.array(all_losses), "LVAE", loss_input)
 
 
     # Printing some stats
