@@ -56,7 +56,7 @@ def plot_anomaly(model_name, original_image, reconstructed_image, id, anomaly_ty
     The function will plot the image and save it in a pdf file.
     """
     save_path = f"anomaly/figure_reconstruction/{anomaly_type}/{method}/{model_name}_subject_{id}"
-
+    os.makedirs(save_path, exist_ok=True)
     # Compute the residual and binary mask
     if method == "image":
         
@@ -93,6 +93,7 @@ def plot_anomaly_bar(array_anomaly_detected, model_name, anomaly_type, method, n
     an anomaly for the i-th image of a subject.
     """
     save_path = f"anomaly/figure_reconstruction/bar_plots/{anomaly_type}/{model_name}_{method}_{anomaly_type}_bar_plot"
+    os.makedirs(save_path, exist_ok=True)
     x = np.array([i for i in range(1, 11)])
     color = "tab:blue" if model_name=="VAE" else "tab:orange"
 
@@ -118,9 +119,9 @@ if __name__=="__main__":
     args = parser.parse_args()
 
     anomaly = args.anomaly
-    anomaly_list = ["darker_circle", "darker_line", "growing_circle"]
+    anomaly_list = ["darker_circle", "darker_line", "growing_circle", "shrinking_circle"]
     if anomaly not in anomaly_list:
-        print("Error, anomaly not found, select one of the following anomaly : 'darker_circle', 'darker_line', 'growing_circle' ")
+        print("Error, anomaly not found, select one of the following anomaly : 'darker_circle', 'darker_line', 'growing_circle' , 'shrinking_circle' ")
         exit()
 
     loss_input = args.loss_input

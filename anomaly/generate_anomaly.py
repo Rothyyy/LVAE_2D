@@ -14,7 +14,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     anomaly = args.anomaly
-    anomaly_list = ["darker_circle", "darker_line", "growing_circle"]
+    anomaly_list = ["darker_circle", "darker_line", "growing_circle", "shrinking_circle"]
     if anomaly not in anomaly_list:
         print("Error, anomaly not found, select one of the following anomaly : 'darker_circle', 'darker_line', 'growing_circle' ")
         exit()
@@ -53,6 +53,8 @@ if __name__ == "__main__":
             # Add the anomaly
             if anomaly == "growing_circle":
                 cv2.circle(image_uint8, contours[leftmost_position], round(ages[t]-ages[0]), (255,255,255), -1)
+            if anomaly == "shrinking_circle":
+                cv2.circle(image_uint8, contours[leftmost_position], round(ages[9-t]-ages[0]), (255,255,255), -1)
             if anomaly == "darker_circle":
                 cv2.circle(image_uint8, contours[leftmost_position], 1, 
                            (max(0, 200-20*round(ages[t]-ages[0])),
