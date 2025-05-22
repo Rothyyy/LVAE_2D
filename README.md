@@ -31,19 +31,19 @@ The repository already contains the `starmen_dataset.csv` file and checkpoints f
 
 # The anomaly detection workflow
 
-- First, we generate the anomalous dataset, currently we can add three different kind of anomaly : [`growing_circle`, `darker_circle`, `darker_line`], these anomaly consist in adding a modification that grows more apparent with time.
+- First, we generate the anomalous dataset, currently we can add three different kind of anomaly : [`growing_circle`, `darker_circle`, `darker_line`, `shrinking_circle`], these anomaly consist in adding a modification that grows more apparent with time.
 
     To do that, launch : `python anomaly/generate_anomaly.py -n num_sample -a anomaly_type` where `num_sample` is the number of starmen to select (10 by default), and `anomaly_type` is one of the three anomaly described above. As output, you will obtain the anomalous images in npy format stored in `data_starmen/anomaly_images` folder and the corresponding csv file in `data_csv` folder. You will also obtain plots of histogram from the reconstruction loss computed.
 
 
 - The second step is to compute and store the different threshold that will be used during the detection.
 
-    To do that, launch : `python compute_threshold.py -l method` where method is one of the following : [`image`, `pixel`, `pixel_all`]. Depending on the method used the threshold's computation will be different. As output you will obtain a csv file in folder `data_csv` containing some statistics and the tresholds.
+    To do that, launch : `python compute_threshold.py -m method` where method is one of the following : [`image`, `pixel`, `pixel_all`]. Depending on the method used the threshold's computation will be different. As output you will obtain a csv file in folder `data_csv` containing some statistics and the tresholds.
 
 
 - The last step is to launch the anomaly detection.
     
-    To do that launch : `python detect_anomaly_.py -a anomaly_type -l method` where anomaly type is one of the following [`growing_circle`, `darker_circle`, `darker_line`] and method [`image`, `pixel`, `pixel_all`].
+    To do that launch : `python detect_anomaly_.py -a anomaly_type -m method` where anomaly type is one of the following [`growing_circle`, `darker_circle`, `darker_line`, `shrinking_circle`] and method [`image`, `pixel`, `pixel_all`].
 
     As output you will obtain figures in the folder `anomaly/figure_reconstruction/anomaly_type/method` where you will find three rows with orginal image, reconstruction and residual.
 

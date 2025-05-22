@@ -131,17 +131,19 @@ def plot_recon_error_histogram(recon_error_list, model_name, method):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("-l", "--loss_input", type=str, required=False, default="pixel")
+    parser.add_argument("-m", "--method", type=str, required=False, default="pixel")
+    parser.add_argument("--beta", type=float, required=False, default=5)
     args = parser.parse_args()
 
-    loss_input = args.loss_input
-    if loss_input == "image":
+    method = args.method
+    if method == "image":
         loss_function = image_reconstruction_error
-    elif loss_input == "pixel" or loss_input == "pixel_all":
+    elif method == "pixel" or method == "pixel_all":
         loss_function = pixel_reconstruction_error
     else:
         print("Error in the input_loss, select one among the following : ['image', 'pixel', 'pixel_all]")
         exit()
+    beta = args.beta
     stats_dict = {}
 
     # Setting some parameters
@@ -149,8 +151,8 @@ if __name__ == "__main__":
     num_worker = round(os.cpu_count()/6)
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
-    nn_saving_path = f"saved_models_2D/CVAE2D_4_5_100_200.pth"
-    longitudinal_saving_path = f"saved_models_2D/longitudinal_estimator_params_CVAE2D_4_5_100_200.json"
+    nn_saving_path = f"saved_models_2D/CVAE2D_4_{beta}_100_200.pth"
+    longitudinal_saving_path = f"saved_models_2D/longitudinal_estimator_params_CVAE2D_4_{beta}_100_200.json"
 
     ##### LAUNCHING COMPUTATION FOR VAE #####
 
@@ -171,14 +173,14 @@ if __name__ == "__main__":
             x = x.to(device)
 
             mu, logvar, recon_x, _ = model(x)
-            reconstruction_loss = loss_function(recon_x, x, loss_input)
+            reconstruction_loss = loss_function(recon_x, x, method)
 
             loss = reconstruction_loss
             all_losses.append(loss)
     
-    stats_dict.update(compute_stats(all_losses, "VAE", loss_input))
-    if loss_input != "pixel_all":
-        plot_recon_error_histogram(np.array(all_losses), "VAE", loss_input)
+    stats_dict.update(compute_stats(all_losses, "VAE", method))
+    if method != "pixel_all":
+        plot_recon_error_histogram(np.array(all_losses), "VAE", method)
 
 
 
@@ -202,19 +204,19 @@ if __name__ == "__main__":
             x = data[0]
             mus, logvars, recon_x = get_longitudinal_images(data, model, longitudinal_estimator)
             for i in range(len(mus)):
-                reconstruction_loss = loss_function(recon_x[i], x[i], loss_input)
-                if loss_input == "pixel":
+                reconstruction_loss = loss_function(recon_x[i], x[i], method)
+                if method == "pixel":
                     reconstruction_loss = reconstruction_loss.flatten()
 
                 all_losses.append(reconstruction_loss)
 
-    stats_dict.update(compute_stats(all_losses, "LVAE", loss_input))
-    if loss_input != "pixel_all":
-        plot_recon_error_histogram(np.array(all_losses), "LVAE", loss_input)
+    stats_dict.update(compute_stats(all_losses, "LVAE", method))
+    if method != "pixel_all":
+        plot_recon_error_histogram(np.array(all_losses), "LVAE", method)
 
 
     # Printing some stats
-    if loss_input != "pixel_all":
+    if method != "pixel_all":
         print()
         print("Stats for VAE losses :")
         print("min =", stats_dict["VAE_min"])
@@ -231,12 +233,12 @@ if __name__ == "__main__":
         print("max =", stats_dict["LVAE_max"])
         print("mean =", stats_dict["LVAE_mean"])
         print("median =", stats_dict["LVAE_median"])
-        print(f"Number of {loss_input} above VAE_95 =", np.sum(all_losses > stats_dict["VAE_threshold_95"]))
+        print(f"Number of {method} above VAE_95 =", np.sum(all_losses > stats_dict["VAE_threshold_95"]))
         print("95th percentile =", stats_dict["VAE_threshold_95"])
         print("99th percentile =", stats_dict["VAE_threshold_99"])
 
         print("dict =", stats_dict) 
 
     # Saving the stats dictionnary in a json file
-    with open(f'data_csv/anomaly_threshold_{loss_input}.json', 'w') as f:
+    with open(f'data_csv/anomaly_threshold_{method}.json', 'w') as f:
         json.dump(stats_dict, f, ensure_ascii=False)

@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 import torch
 from leaspy import AlgorithmSettings, Leaspy
-from torch.utils.data import DataLoader
+from torch.utils.data import DataLoader, Dataset
 import matplotlib.pyplot as plt
 import torchvision.transforms as transforms
 import argparse
@@ -111,10 +111,37 @@ def plot_anomaly_bar(array_anomaly_detected, model_name, anomaly_type, method, n
     return 
 
 
+class Dataset2D_VAE_AD(Dataset):
+    """
+    Dataset class used for Anomaly detection to retrieve the subject id
+    """
+
+    def __init__(self, summary_file, transform=None, target_transform=None,
+                 read_image=lambda x: torch.Tensor(plt.imshow(x))):
+        self.summary_dataframe = pd.read_csv(summary_file)
+        self.transform = transforms.Compose([
+            transforms.ToTensor(),
+            transforms.Lambda(lambda x: x.to(torch.float32))
+        ])
+
+    def __len__(self):
+        return len(self.summary_dataframe)
+
+    def __getitem__(self, idx):
+        summary_rows = self.summary_dataframe.iloc[idx]
+        img_path = summary_rows["image_path"]
+        subject_id = summary_rows["subject_id"]
+        image = np.load(img_path)
+        image = self.transform(image)
+        return image, subject_id
+
+
+
 if __name__=="__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("-a", "--anomaly", type=str, required=False, default="darker_circle")
-    parser.add_argument("-l", "--loss_input", type=str, required=False, default="pixel")
+    parser.add_argument("-m", "--method", type=str, required=False, default="pixel")
+    parser.add_argument("--beta", type=float, required=False, default=5)
 
     args = parser.parse_args()
 
@@ -124,19 +151,20 @@ if __name__=="__main__":
         print("Error, anomaly not found, select one of the following anomaly : 'darker_circle', 'darker_line', 'growing_circle' , 'shrinking_circle' ")
         exit()
 
-    loss_input = args.loss_input
-    if loss_input not in ["image", "pixel", "pixel_all"]:
+    method = args.method
+    if method not in ["image", "pixel", "pixel_all"]:
         print("Error, anomaly not found, select one of the following anomaly : 'image', 'pixel', 'pixel_all' ")
         exit()
-    if loss_input == "image":
+    if method == "image":
         loss_function = image_reconstruction_error
         size_anomaly = (10, 1)
     else:
         loss_function = pixel_reconstruction_error
-        size_anomaly = (10, 64*64) if loss_input == "pixel" else (10, 64, 64)
+        size_anomaly = (10, 64*64) if method == "pixel" else (10, 64, 64)
 
 
     # Setting some parameters
+    beta = args.beta
     n = 10  # The number of subject to consider
     num_images = n*10
     latent_dimension = 4
@@ -145,7 +173,7 @@ if __name__=="__main__":
 
     # Path to dataset and treshold
     anomaly_dataset_path = f"data_csv/anomaly_{anomaly}_starmen_dataset.csv"
-    threshold_path = f"data_csv/anomaly_threshold_{loss_input}.json"
+    threshold_path = f"data_csv/anomaly_threshold_{method}.json"
     with open(threshold_path) as json_file:
         threshold_dict = json.load(json_file)
 
@@ -156,19 +184,20 @@ if __name__=="__main__":
 
     # Loading VAE model
     model = CVAE2D_ORIGINAL(latent_dimension)
-    model_path = "saved_models_2D/CVAE2D_4_5_100_200.pth"
+    model_path = f"saved_models_2D/CVAE2D_4_{beta}_100_200.pth"
     model.load_state_dict(torch.load(model_path, map_location='cpu'))
     model = model.to(device)
 
 
     # Loading thresholds and dataset
-    dataset = Dataset2D(anomaly_dataset_path)
+    # dataset = Dataset2D(anomaly_dataset_path)
+    dataset = Dataset2D_VAE_AD(anomaly_dataset_path)
     data_loader = DataLoader(dataset, batch_size=10, num_workers=num_workers, pin_memory=True, shuffle=False)
     
     VAE_threshold_95 = threshold_dict["VAE_threshold_95"]
     VAE_threshold_99 = threshold_dict["VAE_threshold_99"]
 
-    if loss_input == "pixel_all":
+    if method == "pixel_all":
         VAE_threshold_95 = torch.tensor(VAE_threshold_95)
         VAE_threshold_99 = torch.tensor(VAE_threshold_99)
 
@@ -176,30 +205,27 @@ if __name__=="__main__":
     # These two variables will count the total number of anomalous images/pixel detected 
     VAE_anomaly_detected_95 = 0
     VAE_anomaly_detected_99 = 0
-    file_id = 0  # For plot file name
-
 
     with torch.no_grad():
         # This variable will store how many times a image/pixel will be considered as anomalous
         total_detection_anomaly = torch.zeros(size_anomaly) 
         
-        for images in data_loader:
-            pixel_errors = torch.zeros(size_anomaly, dtype=bool) if loss_input != "image" else None
+        for images, id in data_loader:
+            pixel_errors = torch.zeros(size_anomaly, dtype=bool) if method != "image" else None
 
-            file_id += 1
             anomaly_detected_vector = torch.zeros(10, dtype=bool) # This vector of boolean will be used for the plot
             images = images.to(device)
             mu, logvar, recon_images, _ = model(images)    # mu.shape = (10,4)
 
             # For each image of a subject, compute the error and compare with threshold
             for i in range(10):
-                reconstruction_error = loss_function(recon_images[i, 0], images[i, 0], loss_input)
+                reconstruction_error = loss_function(recon_images[i, 0], images[i, 0], method)
                 
                 compare_to_threshold_95 = reconstruction_error > VAE_threshold_95
                 anomaly_detected_vector[i] += (compare_to_threshold_95).any()
                 total_detection_anomaly[i] += compare_to_threshold_95
 
-                if loss_input != "image":
+                if method != "image":
                     pixel_errors[i] = compare_to_threshold_95 
                 
 
@@ -207,10 +233,10 @@ if __name__=="__main__":
                 VAE_anomaly_detected_99 += torch.sum(reconstruction_error > VAE_threshold_99).item()
 
             # For a subject, plot the anomalous image, the reconstructed image and the residual
-            plot_anomaly("VAE", images, recon_images, file_id, anomaly, loss_input, anomaly_detected_vector, pixel_errors)
+            plot_anomaly("VAE", images, recon_images, id[0], anomaly, method, anomaly_detected_vector, pixel_errors)
 
-    if loss_input == "image":   # pixel or pixel_all would have too many bar to plot making it unreadable
-        plot_anomaly_bar(total_detection_anomaly.flatten(), "VAE", anomaly, loss_input, num_images)
+    if method == "image":   # pixel or pixel_all would have too many bar to plot making it unreadable
+        plot_anomaly_bar(total_detection_anomaly.flatten(), "VAE", anomaly, method, num_images)
 
 
 
@@ -227,25 +253,24 @@ if __name__=="__main__":
 
     LVAE_threshold_95 = threshold_dict["VAE_threshold_95"]
     LVAE_threshold_99 = threshold_dict["VAE_threshold_99"]
-    if loss_input == "pixel_all":
+    if method == "pixel_all":
         LVAE_threshold_95 = torch.tensor(LVAE_threshold_95)
         LVAE_threshold_99 = torch.tensor(LVAE_threshold_99)
 
     # Loading LVAE model
     model = CVAE2D_ORIGINAL(latent_dimension)
-    model_path = "saved_models_2D/CVAE2D_4_5_100_200.pth2"
+    model_path = f"saved_models_2D/CVAE2D_4_{beta}_100_200.pth2"
     model.load_state_dict(torch.load(model_path, map_location='cpu'))
     model = model.to(device)
     model.training = False
 
-    longitudinal_saving_path = "saved_models_2D/longitudinal_estimator_params_CVAE2D_4_5_100_200.json2"
+    longitudinal_saving_path = f"saved_models_2D/longitudinal_estimator_params_CVAE2D_4_{beta}_100_200.json2"
     longitudinal_estimator = Leaspy.load(longitudinal_saving_path)
 
 
     # These two variables will count the total number of anomalous images detected 
     LVAE_anomaly_detected_95 = 0
     LVAE_anomaly_detected_99 = 0
-    file_id = 0  # For plot file name
 
 
     with torch.no_grad():
@@ -253,9 +278,7 @@ if __name__=="__main__":
         total_detection_anomaly = torch.zeros(size_anomaly) 
 
         for data in data_loader:
-            pixel_errors = torch.zeros(size_anomaly, dtype=bool) if loss_input != "image" else None
-
-            file_id += 1
+            pixel_errors = torch.zeros(size_anomaly, dtype=bool) if method != "image" else None
             anomaly_detected_vector = torch.zeros(10, dtype=bool) # This vector of boolean will be used for the plot
 
             images = data[0]
@@ -263,12 +286,12 @@ if __name__=="__main__":
 
             # For each image of a subject, compute the error and compare with threshold
             for i in range(10):
-                reconstruction_error = loss_function(recon_images[i, 0], images[i, 0], loss_input)
+                reconstruction_error = loss_function(recon_images[i, 0], images[i, 0], method)
                 
                 compare_to_threshold_95 = reconstruction_error > VAE_threshold_95
                 anomaly_detected_vector[i] += (compare_to_threshold_95).any()
                 total_detection_anomaly[i] += compare_to_threshold_95
-                if loss_input != "image":
+                if method != "image":
                     pixel_errors[i] = compare_to_threshold_95 
                 
 
@@ -276,21 +299,21 @@ if __name__=="__main__":
                 LVAE_anomaly_detected_99 += torch.sum(reconstruction_error > LVAE_anomaly_detected_99).item()
             
             # For a subject, plot the anomalous image, the reconstructed image and the residual
-            plot_anomaly("LVAE", images, recon_images, file_id, anomaly, loss_input, anomaly_detected_vector, pixel_errors)
+            plot_anomaly("LVAE", images, recon_images, data[2][0], anomaly, method, anomaly_detected_vector, pixel_errors)
 
-    if loss_input == "image":   # pixel or pixel_all would have too many bar to plot
-        plot_anomaly_bar(total_detection_anomaly.flatten(), "LVAE", anomaly, loss_input, num_images)
+    if method == "image":   # pixel or pixel_all would have too many bar to plot
+        plot_anomaly_bar(total_detection_anomaly.flatten(), "LVAE", anomaly, method, num_images)
 
 
     ######## PRINTING SOME RESULTS ########
 
     print()
-    print(f"Using method {loss_input} with VAE and {num_images} images:")
+    print(f"Using method {method} with VAE and {num_images} images:")
     print(f"With threshold_95 we detect {VAE_anomaly_detected_95} anomaly.")
     print(f"With threshold_99 we detect {VAE_anomaly_detected_99} anomaly.")
     print()
 
-    print(f"Using method {loss_input} with LVAE and {num_images} images:")
+    print(f"Using method {method} with LVAE and {num_images} images:")
     print(f"With threshold_95 we detect {LVAE_anomaly_detected_95} anomaly.")
     print(f"With threshold_99 we detect {LVAE_anomaly_detected_99} anomaly.")
 
