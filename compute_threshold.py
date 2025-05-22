@@ -101,7 +101,6 @@ def plot_recon_error_histogram(recon_error_list, model_name, method):
         recon_error_list *= 255
 
     custom_bins = [i*15 for i in range(20)]
-    print(custom_bins)
     fig, ax = plt.subplots()
     counts, bin_edges, patches = ax.hist(recon_error_list, color=color, edgecolor='black', bins=custom_bins)
 
