@@ -79,7 +79,7 @@ def plot_anomaly(model_name, original_image, reconstructed_image, id, anomaly_ty
             axarr[2, i].imshow(pixel_anomaly[i, :, :], cmap="gray")
 
         axarr[0, i].set_title(f"AD = {detection_vector[i]}", fontsize=64)
-    f.suptitle(f'Individual id = {id}, (AD = True => Anomaly detected, else False)', fontsize=80)
+    f.suptitle(f'Individual id = {id}, method = {method}, (AD = True => Anomaly detected, else False)', fontsize=80)
     plt.tight_layout()
     os.makedirs(os.path.dirname(save_path), exist_ok=True)
     plt.savefig(save_path+".pdf")
@@ -173,7 +173,10 @@ if __name__=="__main__":
 
     # Path to dataset and treshold
     anomaly_dataset_path = f"data_csv/anomaly_{anomaly}_starmen_dataset.csv"
-    threshold_path = f"data_csv/anomaly_threshold_{method}.json"
+    if beta != 5:
+        threshold_path = f"data_csv/anomaly_threshold_{method}_{beta}.json"
+    else:
+        threshold_path = f"data_csv/anomaly_threshold_{method}.json"
     with open(threshold_path) as json_file:
         threshold_dict = json.load(json_file)
 
@@ -221,7 +224,7 @@ if __name__=="__main__":
             for i in range(10):
                 reconstruction_error = loss_function(recon_images[i, 0], images[i, 0], method)
                 
-                compare_to_threshold_95 = reconstruction_error > VAE_threshold_95
+                compare_to_threshold_95 = reconstruction_error > VAE_threshold_99   # Here to change with threshold to use
                 anomaly_detected_vector[i] += (compare_to_threshold_95).any()
                 total_detection_anomaly[i] += compare_to_threshold_95
 
@@ -288,7 +291,7 @@ if __name__=="__main__":
             for i in range(10):
                 reconstruction_error = loss_function(recon_images[i, 0], images[i, 0], method)
                 
-                compare_to_threshold_95 = reconstruction_error > VAE_threshold_95
+                compare_to_threshold_95 = reconstruction_error > VAE_threshold_99   # Here to change with threshold to use
                 anomaly_detected_vector[i] += (compare_to_threshold_95).any()
                 total_detection_anomaly[i] += compare_to_threshold_95
                 if method != "image":

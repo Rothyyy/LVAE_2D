@@ -97,22 +97,29 @@ def plot_recon_error_histogram(recon_error_list, model_name, method):
     if len(recon_error_list.shape) > 1:
         recon_error_list = recon_error_list.flatten() 
 
+    if method == "pixel":
+        recon_error_list *= 255
+
+    custom_bins = [i*15 for i in range(20)]
+    print(custom_bins)
     fig, ax = plt.subplots()
-    counts, bin_edges, patches = ax.hist(recon_error_list, color=color, edgecolor='black')
+    counts, bin_edges, patches = ax.hist(recon_error_list, color=color, edgecolor='black', bins=custom_bins)
 
     # Create custom bin labels and set ticks
-    if method == "image":
-        bin_labels = [f'{int(bin_edges[i])}-{int(bin_edges[i+1])}' for i in range(len(bin_edges) - 1)]
-    else:
-        bin_labels = [f'{int(bin_edges[i] * 255)}-{int(bin_edges[i+1] * 255)}' for i in range(len(bin_edges) - 1)]
+    bin_labels = [f'{int(bin_edges[i])}-{int(bin_edges[i+1])}' for i in range(len(bin_edges) - 1)]
+    # if method == "image":
+    #     bin_labels = [f'{int(bin_edges[i])}-{int(bin_edges[i+1])}' for i in range(len(bin_edges) - 1)]
+    # else:
+    #     bin_labels = [f'{int(bin_edges[i] * 255)}-{int(bin_edges[i+1] * 255)}' for i in range(len(bin_edges) - 1)]
     
     bin_centers = 0.5 * (bin_edges[:-1] + bin_edges[1:])
     ax.set_xticks(bin_centers)
     ax.set_xticklabels(bin_labels, rotation=45)
 
     # Add counts on top of each bar
-    for count, x in zip(counts, bin_centers):
-        ax.text(x, count + 0.008 * max(counts), str(int(count)), ha='center', va='bottom', fontsize=10)
+    if method == "image":
+        for count, x in zip(counts, bin_centers):
+            ax.text(x, count + 0.008 * max(counts), str(int(count)), ha='center', va='bottom', fontsize=10)
 
 
 
@@ -240,5 +247,9 @@ if __name__ == "__main__":
         print("dict =", stats_dict) 
 
     # Saving the stats dictionnary in a json file
-    with open(f'data_csv/anomaly_threshold_{method}.json', 'w') as f:
-        json.dump(stats_dict, f, ensure_ascii=False)
+    if beta == 5:
+        with open(f'data_csv/anomaly_threshold_{method}.json', 'w') as f:
+            json.dump(stats_dict, f, ensure_ascii=False)
+    else:
+        with open(f'data_csv/anomaly_threshold_{method}_{beta}.json', 'w') as f:
+            json.dump(stats_dict, f, ensure_ascii=False)
