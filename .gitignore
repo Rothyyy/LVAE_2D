@@ -1,3 +1,4 @@
 data_starmen/images/*.npy
 __pycache__/
 data_starmen/anomaly_images/*.npy
+plots_storage
