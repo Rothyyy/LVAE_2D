@@ -59,9 +59,21 @@ def plot_comparison(original_image, reconstructed_image_VAE, reconstructed_image
     os.makedirs(f"results_reconstruction/{anomaly_type}_model_comparison", exist_ok=True)
     # Compute the residual and binary mask
 
-    residual_images_VAE_LVAE = torch.abs(reconstructed_image_VAE - reconstructed_image_LVAE)
     mask_threshold = 0.15
-    binary_mask = (residual_images_VAE_LVAE > mask_threshold).to(torch.uint8)
+
+    # residual_images_VAE_LVAE = torch.abs(reconstructed_image_VAE - reconstructed_image_LVAE)
+    residual_input_VAE = torch.abs(original_image - reconstructed_image_VAE)
+    residual_input_LVAE = torch.abs(original_image - reconstructed_image_LVAE)
+
+    # binary_mask = (residual_images_VAE_LVAE > mask_threshold).to(torch.uint8)
+    binary_input_VAE = (residual_input_VAE > mask_threshold).to(torch.uint8)
+    binary_input_LVAE = (residual_input_LVAE > mask_threshold).to(torch.uint8)
+    print(binary_input_LVAE.max())
+    binary_overlay = torch.zeros((10,64,64,3))
+    for i in range(10):
+        binary_overlay[i,:,:,0] = binary_input_LVAE[i,:,:]
+        binary_overlay[i,:,:,2] = binary_input_VAE[i,:,:]
+
 
     fig_width = original_image.shape[0] * 10
     fig_height = 50  # Adjust as needed
@@ -70,13 +82,23 @@ def plot_comparison(original_image, reconstructed_image_VAE, reconstructed_image
         axarr[0, i].imshow(original_image[i, 0 , :, :], cmap="gray")
         axarr[1, i].imshow(reconstructed_image_VAE[i, 0, :, :], cmap="gray")
         axarr[2, i].imshow(reconstructed_image_LVAE[i, 0, :, :], cmap="gray")
-        axarr[3, i].imshow(binary_mask[i, 0, :, :], cmap="gray")
+        # axarr[3, i].imshow(binary_mask[i, 0, :, :], cmap="gray")
+        axarr[3, i].imshow(binary_overlay[i])
+        # axarr[3, i].imshow(binary_input_VAE[i, 0, :, :], cmap=blue_cmap)
+        # axarr[3, i].imshow(binary_input_LVAE[i, 0, :, :], cmap=red_cmap)
+ 
+    # Row labels
+    row_labels = ["Input", "VAE", "LVAE", "Residual \n input - model"]
+    for row in range(4):
+        # Add label to the first column of each row, closer and vertically centered
+        axarr[row, 0].annotate(row_labels[row],
+                            xy=(-0.1, 0.5),  # Slightly to the left, centered vertically
+                            xycoords='axes fraction',
+                            ha='right',
+                            va='center',
+                            fontsize=60)
 
-    # row_titles = ['Original image', 'VAE recon', 'LVAE recon', 'Reconstructions residual']
-    # for i, title in enumerate(row_titles):
-    #     fig.text(0.04, 0.88 - i * 0.22, title, va='center', ha='right', fontsize=40, rotation=90)
-
-    fig.suptitle(f"Individual id = {id}, anomaly type = {anomaly_type}", fontsize=80)
+    fig.suptitle(f"Comparison VAE/LVAE, Individual id = {id}, anomaly type = {anomaly_type}", fontsize=80)
     plt.tight_layout()
     os.makedirs(os.path.dirname(save_path), exist_ok=True)
     plt.savefig(save_path+".pdf")

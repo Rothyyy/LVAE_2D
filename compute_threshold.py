@@ -100,7 +100,11 @@ def plot_recon_error_histogram(recon_error_list, model_name, method):
     if method == "pixel":
         recon_error_list *= 255
 
-    custom_bins = [i*15 for i in range(20)]
+    if method == "image":
+        custom_bins = [i*15 for i in range(20)]
+    else:
+        custom_bins = [i*5 for i in range(30)]
+
     fig, ax = plt.subplots()
     counts, bin_edges, patches = ax.hist(recon_error_list, color=color, edgecolor='black', bins=custom_bins)
 
@@ -120,12 +124,20 @@ def plot_recon_error_histogram(recon_error_list, model_name, method):
         for count, x in zip(counts, bin_centers):
             ax.text(x, count + 0.008 * max(counts), str(int(count)), ha='center', va='bottom', fontsize=10)
 
-
+    # else:
+    #     for count, x in zip(counts, bin_centers):
+    #         ax.text(x, count + 0.008 * max(counts), '{:.2e}'.format(count), ha='center', va='bottom', fontsize=10)
 
     # Add axis labels and title
     ax.set_xlabel('Reconstruction error range')
     ax.set_ylabel('Count')
-    ax.set_title(f'Reconstruction errors value when considering {method} with {model_name}')
+    if method == "image":
+        ax.set_title(f'Reconstruction errors when considering {method} with {model_name}')
+        ax.set_ylim(0, 5000)  # Set the y-axis range to fit your expected scale
+        
+    elif method == "pixel":
+        ax.set_title(f'Pixel differences with {model_name}')
+        ax.set_ylim(0, 2.5e7)
 
     # Layout fix
     fig.tight_layout()
