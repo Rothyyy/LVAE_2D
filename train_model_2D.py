@@ -42,15 +42,17 @@ parser.add_argument('--batch_size', type=int, required=False, default=256,
                     help='batch_size to train the VAE, default = 256')
 parser.add_argument('-f', '--freeze', type=str, required=False, default='y',
                     help='freeze convolution layer ? default = y')
+parser.add_argument('--dataset', type=str, required=False, default="noacc",
+                    help='Use the models trained on dataset "acc" or "noacc"')
 temp_args, _ = parser.parse_known_args()
 
 freeze_path = "freeze_conv" if temp_args.freeze == 'y' else "no_freeze"
 
 parser.add_argument('--nnmodel_path', type=str, required=False,
-                    default=f'saved_models_2D/{freeze_path}/{temp_args.nnmodel_name}_{temp_args.dimension}_{temp_args.beta}_{temp_args.gamma}_{temp_args.iterations}.pth',
+                    default=f'saved_models_2D/dataset_{temp_args.dataset}/{freeze_path}/{temp_args.nnmodel_name}_{temp_args.dimension}_{temp_args.beta}_{temp_args.gamma}_{temp_args.iterations}.pth',
                     help='path where the neural network model parameters are saved')
 parser.add_argument('--longitudinal_estimator_path', type=str, required=False,
-                    default=f'saved_models_2D/{freeze_path}/longitudinal_estimator_params_{temp_args.nnmodel_name}_{temp_args.dimension}_{temp_args.beta}_{temp_args.gamma}_{temp_args.iterations}.json',
+                    default=f'saved_models_2D/dataset_{temp_args.dataset}/{freeze_path}/longitudinal_estimator_params_{temp_args.nnmodel_name}_{temp_args.dimension}_{temp_args.beta}_{temp_args.gamma}_{temp_args.iterations}.json',
                     help='path where the longitudinal estimator parameters are saved')
 args = parser.parse_args()
 
@@ -138,7 +140,7 @@ model.to(device)
 plt.plot(np.arange(1, len(all_losses) + 1), all_losses, label="Train loss (VAE)")
 plt.legend()
 plt.grid(True)
-plt.savefig(f"{output_path}loss_VAE.pdf")
+plt.savefig(f"{output_path}loss_VAE_{freeze_path}.pdf")
 plt.show()
 
 
@@ -168,7 +170,7 @@ model.load_state_dict(torch.load(nn_saving_path + "2", map_location='cpu'))
 plt.plot(np.arange(len(all_losses), len(all_losses) + len(lvae_losses)), lvae_losses, label="Train loss (LVAE)")
 plt.grid(True)
 plt.legend()
-plt.savefig(f"{output_path}loss_LVAE.pdf")
+plt.savefig(f"{output_path}loss_LVAE_{freeze_path}.pdf")
 plt.show()
 
 
@@ -178,9 +180,9 @@ results_estimator, _ = fit_longitudinal_estimator_on_nn(data_loader, model, devi
                                                         algo_settings)
 results_estimator.save(longitudinal_saving_path + "2")
 
-display_individual_observations_2D(model, 9, './data_csv/starmen_dataset.csv',
-                                           fitted_longitudinal_estimator=results_estimator,
-                                           save_path=f"{output_path}results_2D_subject9_proj.pdf")
-display_individual_observations_2D(model, 9, './data_csv/starmen_dataset.csv',
-                                           fitted_longitudinal_estimator=None,
-                                           save_path=f"{output_path}results_2D_subject9_noproj.pdf")
+# display_individual_observations_2D(model, 9, './data_csv/starmen_dataset.csv',
+#                                            fitted_longitudinal_estimator=results_estimator,
+#                                            save_path=f"{output_path}results_2D_subject9_proj.pdf")
+# display_individual_observations_2D(model, 9, './data_csv/starmen_dataset.csv',
+#                                            fitted_longitudinal_estimator=None,
+#                                            save_path=f"{output_path}results_2D_subject9_noproj.pdf")

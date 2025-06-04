@@ -181,6 +181,8 @@ if __name__=="__main__":
     parser.add_argument("--beta", type=float, required=False, default=5)
     parser.add_argument('-f', '--freeze', type=str, required=False, default='y',
                         help='freeze convolution layer ? default = y')
+    parser.add_argument('--dataset', type=str, required=False, default="noacc",
+                        help='Use the models trained on dataset "acc" or "noacc"')
     args = parser.parse_args()
     freeze_path = "freeze_conv" if args.freeze == 'y' else "no_freeze"
 
@@ -213,9 +215,9 @@ if __name__=="__main__":
     # Path to dataset and treshold
     anomaly_dataset_path = f"data_csv/anomaly_{anomaly}_starmen_dataset.csv"
     if beta != 5:
-        threshold_path = f"data_csv/anomaly_threshold_{method}_{beta}.json"
+        threshold_path = f"data_csv/anomaly_threshold_{method}_{beta}_{freeze_path}.json"
     else:
-        threshold_path = f"data_csv/anomaly_threshold_{method}.json"
+        threshold_path = f"data_csv/anomaly_threshold_{method}_{freeze_path}.json"
     with open(threshold_path) as json_file:
         threshold_dict = json.load(json_file)
 
@@ -226,7 +228,7 @@ if __name__=="__main__":
 
     # Loading VAE model
     model_VAE = CVAE2D_ORIGINAL(latent_dimension)
-    model_VAE_path = f"saved_models_2D/CVAE2D_4_{beta}_100_200.pth"
+    model_VAE_path = f"saved_models_2D/dataset_{args.dataset}/{freeze_path}/CVAE2D_4_{beta}_100_200.pth"
     model_VAE.load_state_dict(torch.load(model_VAE_path, map_location='cpu'))
     model_VAE = model_VAE.to(device)
     model_VAE.training = False
@@ -234,12 +236,12 @@ if __name__=="__main__":
 
     # Loading LVAE model
     model_LVAE = CVAE2D_ORIGINAL(latent_dimension)
-    model_LVAE_path = f"saved_models_2D/CVAE2D_4_{beta}_100_200.pth2"
+    model_LVAE_path = f"saved_models_2D/dataset_{args.dataset}/{freeze_path}/CVAE2D_4_{beta}_100_200.pth2"
     model_LVAE.load_state_dict(torch.load(model_LVAE_path, map_location='cpu'))
     model_LVAE = model_LVAE.to(device)
     model_LVAE.training = False
 
-    longitudinal_saving_path = f"saved_models_2D/longitudinal_estimator_params_CVAE2D_4_{beta}_100_200.json2"
+    longitudinal_saving_path = f"saved_models_2D/dataset_{args.dataset}/{freeze_path}/longitudinal_estimator_params_CVAE2D_4_{beta}_100_200.json2"
     longitudinal_estimator = Leaspy.load(longitudinal_saving_path)
 
     # Loading thresholds and dataset

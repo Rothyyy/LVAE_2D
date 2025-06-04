@@ -91,7 +91,7 @@ def compute_stats(all_losses, model, method):
 
 
 def plot_recon_error_histogram(recon_error_list, model_name, method):
-    save_path = f"anomaly/figure_reconstruction/recon_error/{model_name}_{method}"
+    save_path = f"anomaly/figure_reconstruction/recon_error/{model_name}_{freeze_path}_{method}_{data_choice}"
     color = "tab:blue" if model_name=="VAE" else "tab:orange"
 
     if len(recon_error_list.shape) > 1:
@@ -128,14 +128,14 @@ def plot_recon_error_histogram(recon_error_list, model_name, method):
     ax.set_xlabel('Reconstruction error range')
     ax.set_ylabel('Count')
     if method == "image":
-        ax.set_title(f'Reconstruction errors when considering {method} with {model_name}')
+        ax.set_title(f'Reconstruction errors when considering {method} with {model_name} ({data_choice})')
         if data_choice == "train":
             ax.set_ylim(0, 5000)  # Set the y-axis range to fit your expected scale
         else:
             ax.set_ylim(0, 1500)
 
     elif method == "pixel":
-        ax.set_title(f'Pixel differences with {model_name}')
+        ax.set_title(f'Pixel differences with {model_name} ({data_choice})')
         if data_choice == "train":
             ax.set_ylim(0, 2.5e7)
         else:
@@ -156,6 +156,8 @@ if __name__ == "__main__":
     parser.add_argument("--beta", type=float, required=False, default=5)
     parser.add_argument('-f', '--freeze', type=str, required=False, default='y',
                         help='freeze convolution layer ? default = y')
+    parser.add_argument('--dataset', type=str, required=False, default="noacc",
+                        help='Use the models trained on dataset "acc" or "noacc"')
     args = parser.parse_args()
     freeze_path = "freeze_conv" if args.freeze == 'y' else "no_freeze"
 
@@ -176,8 +178,8 @@ if __name__ == "__main__":
     num_worker = round(os.cpu_count()/6)
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
-    nn_saving_path = f"saved_models_2D/{freeze_path}/CVAE2D_4_{beta}_100_200.pth"
-    longitudinal_saving_path = f"saved_models_2D/{freeze_path}/longitudinal_estimator_params_CVAE2D_4_{beta}_100_200.json"
+    nn_saving_path = f"saved_models_2D/dataset_{args.dataset}/{freeze_path}/CVAE2D_4_{beta}_100_200.pth"
+    longitudinal_saving_path = f"saved_models_2D/dataset_{args.dataset}/{freeze_path}/longitudinal_estimator_params_CVAE2D_4_{beta}_100_200.json"
 
     ##### LAUNCHING COMPUTATION FOR VAE #####
 
@@ -205,7 +207,7 @@ if __name__ == "__main__":
 
             loss = reconstruction_loss
             all_losses.append(loss)
-    
+
     stats_dict.update(compute_stats(all_losses, "VAE", method))
     if method != "pixel_all":
         plot_recon_error_histogram(np.array(all_losses), "VAE", method)
@@ -264,15 +266,15 @@ if __name__ == "__main__":
         print("mean =", stats_dict["LVAE_mean"])
         print("median =", stats_dict["LVAE_median"])
         print(f"Number of {method} above VAE_95 =", np.sum(all_losses > stats_dict["VAE_threshold_95"]))
-        print("95th percentile =", stats_dict["VAE_threshold_95"])
-        print("99th percentile =", stats_dict["VAE_threshold_99"])
+        print("95th percentile =", stats_dict["LVAE_threshold_95"])
+        print("99th percentile =", stats_dict["LVAE_threshold_99"])
 
         print("dict =", stats_dict) 
 
     # Saving the stats dictionnary in a json file
     if beta == 5:
-        with open(f'data_csv/anomaly_threshold_{method}.json', 'w') as f:
+        with open(f'data_csv/anomaly_threshold_{method}_{freeze_path}.json', 'w') as f:
             json.dump(stats_dict, f, ensure_ascii=False)
     else:
-        with open(f'data_csv/anomaly_threshold_{method}_{beta}.json', 'w') as f:
+        with open(f'data_csv/anomaly_threshold_{method}_{beta}_{freeze_path}.json', 'w') as f:
             json.dump(stats_dict, f, ensure_ascii=False)
