@@ -100,6 +100,7 @@ def plot_recon_error_histogram(recon_error_list, model_name, method):
     if method == "pixel":
         recon_error_list *= 255
 
+    # Create custom bin labels
     if method == "image":
         custom_bins = [i*15 for i in range(20)]
     else:
@@ -108,13 +109,8 @@ def plot_recon_error_histogram(recon_error_list, model_name, method):
     fig, ax = plt.subplots()
     counts, bin_edges, patches = ax.hist(recon_error_list, color=color, edgecolor='black', bins=custom_bins)
 
-    # Create custom bin labels and set ticks
+    # Set ticks
     bin_labels = [f'{int(bin_edges[i])}-{int(bin_edges[i+1])}' for i in range(len(bin_edges) - 1)]
-    # if method == "image":
-    #     bin_labels = [f'{int(bin_edges[i])}-{int(bin_edges[i+1])}' for i in range(len(bin_edges) - 1)]
-    # else:
-    #     bin_labels = [f'{int(bin_edges[i] * 255)}-{int(bin_edges[i+1] * 255)}' for i in range(len(bin_edges) - 1)]
-    
     bin_centers = 0.5 * (bin_edges[:-1] + bin_edges[1:])
     ax.set_xticks(bin_centers)
     ax.set_xticklabels(bin_labels, rotation=45)
@@ -133,11 +129,17 @@ def plot_recon_error_histogram(recon_error_list, model_name, method):
     ax.set_ylabel('Count')
     if method == "image":
         ax.set_title(f'Reconstruction errors when considering {method} with {model_name}')
-        ax.set_ylim(0, 5000)  # Set the y-axis range to fit your expected scale
-        
+        if data_choice == "train":
+            ax.set_ylim(0, 5000)  # Set the y-axis range to fit your expected scale
+        else:
+            ax.set_ylim(0, 1500)
+
     elif method == "pixel":
         ax.set_title(f'Pixel differences with {model_name}')
-        ax.set_ylim(0, 2.5e7)
+        if data_choice == "train":
+            ax.set_ylim(0, 2.5e7)
+        else:
+            ax.set_ylim(0, 1e7)
 
     # Layout fix
     fig.tight_layout()
@@ -150,6 +152,7 @@ def plot_recon_error_histogram(recon_error_list, model_name, method):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("-m", "--method", type=str, required=False, default="pixel")
+    parser.add_argument("-d", "--dataset", type=str, required=False, default="test")
     parser.add_argument("--beta", type=float, required=False, default=5)
     args = parser.parse_args()
 
@@ -162,6 +165,7 @@ if __name__ == "__main__":
         print("Error in the input_loss, select one among the following : ['image', 'pixel', 'pixel_all]")
         exit()
     beta = args.beta
+    data_choice = args.dataset
     stats_dict = {}
 
     # Setting some parameters
@@ -180,8 +184,11 @@ if __name__ == "__main__":
     model.to(device)
     model.training = False
 
-    train_dataset = Dataset2D('data_csv/starmen_train_set.csv', read_image=open_npy,transform=transformations)
-    data_loader = DataLoader(train_dataset, batch_size=1, num_workers=num_worker, shuffle=True, pin_memory=True, )
+    if data_choice == "train":
+        dataset = Dataset2D("data_csv/starmen_train_set.csv", read_image=open_npy,transform=transformations)
+    else:
+        dataset = Dataset2D("data_csv/starmen_test_set.csv", read_image=open_npy,transform=transformations)
+    data_loader = DataLoader(dataset, batch_size=1, num_workers=num_worker, shuffle=True, pin_memory=True, )
     all_losses = []
 
     # 1 epoch to get all reconstruction error with VAE
@@ -211,9 +218,11 @@ if __name__ == "__main__":
     model.training = False
     longitudinal_estimator = Leaspy.load(longitudinal_saving_path + "2")
 
-
-    train_dataset = LongitudinalDataset2D('data_csv/starmen_train_set.csv', read_image=open_npy, transform=transformations)
-    data_loader = DataLoader(train_dataset, batch_size=1, num_workers=num_worker, shuffle=False, collate_fn=longitudinal_collate_2D)
+    if data_choice == "train":
+        dataset = LongitudinalDataset2D("data_csv/starmen_train_set.csv", read_image=open_npy, transform=transformations)
+    else:
+        dataset = LongitudinalDataset2D("data_csv/starmen_test_set.csv", read_image=open_npy, transform=transformations)
+    data_loader = DataLoader(dataset, batch_size=1, num_workers=num_worker, shuffle=False, collate_fn=longitudinal_collate_2D)
     all_losses = []
 
     # 1 epoch to get all reconstruction error with LVAE

@@ -40,13 +40,17 @@ parser.add_argument('--lr', type=float, required=False, default=1e-4,
                     help='Learning rate to train the VAE, default = 1e-4')
 parser.add_argument('--batch_size', type=int, required=False, default=256,
                     help='batch_size to train the VAE, default = 256')
+parser.add_argument('f', '--freeze', type=str, required=False, default='y',
+                    help='freeze convolution layer ? default = y')
 temp_args, _ = parser.parse_known_args()
 
+freeze_path = "freeze_conv" if temp_args.freeze == 'y' else "no_freeze"
+
 parser.add_argument('--nnmodel_path', type=str, required=False,
-                    default=f'saved_models_2D/{temp_args.nnmodel_name}_{temp_args.dimension}_{temp_args.beta}_{temp_args.gamma}_{temp_args.iterations}.pth',
+                    default=f'saved_models_2D/{freeze_path}/{temp_args.nnmodel_name}_{temp_args.dimension}_{temp_args.beta}_{temp_args.gamma}_{temp_args.iterations}.pth',
                     help='path where the neural network model parameters are saved')
 parser.add_argument('--longitudinal_estimator_path', type=str, required=False,
-                    default=f'saved_models_2D/longitudinal_estimator_params_{temp_args.nnmodel_name}_{temp_args.dimension}_{temp_args.beta}_{temp_args.gamma}_{temp_args.iterations}.json',
+                    default=f'saved_models_2D/{freeze_path}/longitudinal_estimator_params_{temp_args.nnmodel_name}_{temp_args.dimension}_{temp_args.beta}_{temp_args.gamma}_{temp_args.iterations}.json',
                     help='path where the longitudinal estimator parameters are saved')
 args = parser.parse_args()
 
@@ -141,7 +145,8 @@ plt.show()
 
 # Training of the Longitudinal VAE
 model.load_state_dict(torch.load(nn_saving_path, map_location='cpu'))
-model.freeze_conv()
+if args.freeze == "y":
+    model.freeze_conv()
 best_loss = 1e15
 validation_dataset = LongitudinalDataset2D('data_csv/starmen_validation_set.csv', read_image=open_npy,
                                            transform=transformations)
