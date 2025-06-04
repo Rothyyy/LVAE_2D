@@ -179,7 +179,7 @@ if __name__=="__main__":
     parser.add_argument("-a", "--anomaly", type=str, required=False, default="growing_circle")
     parser.add_argument("-m", "--method", type=str, required=False, default="pixel")
     parser.add_argument("--beta", type=float, required=False, default=5)
-    parser.add_argument('f', '--freeze', type=str, required=False, default='y',
+    parser.add_argument('-f', '--freeze', type=str, required=False, default='y',
                         help='freeze convolution layer ? default = y')
     args = parser.parse_args()
     freeze_path = "freeze_conv" if args.freeze == 'y' else "no_freeze"

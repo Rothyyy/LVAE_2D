@@ -154,7 +154,10 @@ if __name__ == "__main__":
     parser.add_argument("-m", "--method", type=str, required=False, default="pixel")
     parser.add_argument("-d", "--dataset", type=str, required=False, default="test")
     parser.add_argument("--beta", type=float, required=False, default=5)
+    parser.add_argument('-f', '--freeze', type=str, required=False, default='y',
+                        help='freeze convolution layer ? default = y')
     args = parser.parse_args()
+    freeze_path = "freeze_conv" if args.freeze == 'y' else "no_freeze"
 
     method = args.method
     if method == "image":
@@ -173,8 +176,8 @@ if __name__ == "__main__":
     num_worker = round(os.cpu_count()/6)
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
-    nn_saving_path = f"saved_models_2D/CVAE2D_4_{beta}_100_200.pth"
-    longitudinal_saving_path = f"saved_models_2D/longitudinal_estimator_params_CVAE2D_4_{beta}_100_200.json"
+    nn_saving_path = f"saved_models_2D/{freeze_path}/CVAE2D_4_{beta}_100_200.pth"
+    longitudinal_saving_path = f"saved_models_2D/{freeze_path}/longitudinal_estimator_params_CVAE2D_4_{beta}_100_200.json"
 
     ##### LAUNCHING COMPUTATION FOR VAE #####
 

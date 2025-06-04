@@ -40,7 +40,7 @@ parser.add_argument('--lr', type=float, required=False, default=1e-4,
                     help='Learning rate to train the VAE, default = 1e-4')
 parser.add_argument('--batch_size', type=int, required=False, default=256,
                     help='batch_size to train the VAE, default = 256')
-parser.add_argument('f', '--freeze', type=str, required=False, default='y',
+parser.add_argument('-f', '--freeze', type=str, required=False, default='y',
                     help='freeze convolution layer ? default = y')
 temp_args, _ = parser.parse_known_args()
 
