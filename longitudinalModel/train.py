@@ -4,6 +4,7 @@ from tqdm import tqdm
 import time
 import matplotlib.pyplot as plt
 import numpy as np
+import pandas as pd
 import os
 import sys
 from longitudinalModel.project_encodings_for_training import project_encodings_for_training
@@ -61,7 +62,7 @@ def train(model, data_loader, longitudinal_estimator=None,
     iterator = tqdm(range(nb_epochs), desc="Training", file=sys.stdout)
     for epoch in iterator:
         nb_batch = 0
-        model.training = True   # Unnecessary with the following line
+        model.training = True
         model.train()
         total_loss = []
         total_recon_loss, total_kl_loss, total_alignment_loss = 0.0, 0.0, 0.0
@@ -173,57 +174,64 @@ def train_kfold(model, k_folds_index_list, longitudinal_estimator=None,
 
     iterator = tqdm(range(nb_epochs), desc="Training", file=sys.stdout)
 
-    fold_index = 0      # The index of the fold to use a validation set
+    folds_df_list = [pd.read_csv(f"data_csv/train_folds/starmen_train_set_fold_{i}.csv") for i in k_folds_index_list]
+    valid_index = 0      # The index of the fold to use a validation set
     for epoch in iterator:
         nb_batch = 0
-        model.training = True   # Unnecessary with the following line
+        model.training = True 
         model.train()
         total_loss = []
         total_recon_loss, total_kl_loss, total_alignment_loss = 0.0, 0.0, 0.0
 
-        train_index_list = k_folds_index_list.copy()
-        train_index_list.pop(fold_index)
+        # Selecting validation and training dataframe
+        valid_df = folds_df_list[valid_index]
+        train_df = pd.concat([ folds_df_list[i] for i in range(len(folds_df_list)) if i != valid_index ], ignore_index=True)
+        
+        # Loading them in the Dataset2D class
+        valid_dataset = LongitudinalDataset2D(valid_df, transform=transformations)
+        train_dataset = LongitudinalDataset2D(train_df, transform=transformations)
 
-        for i in train_index_list:
+        # Create the DataLoader
+        valid_data_loader = DataLoader(valid_dataset, batch_size=batch_size, num_workers=num_workers, shuffle=True, pin_memory=True)
+        train_data_loader = DataLoader(train_dataset, batch_size=batch_size, num_workers=num_workers, shuffle=True, pin_memory=True)
 
-            train_fold_dataset = LongitudinalDataset2D(f"data_csv/train_folds/starmen_train_set_fold_{i}.csv", read_image=open_npy,
-                                                transform=transformations)
+        valid_index = valid_index + 1 if valid_index < len(k_folds_index_list)-1 else 0
 
-            data_loader = DataLoader(train_fold_dataset, batch_size=batch_size, num_workers=num_workers, shuffle=False,
-                                    collate_fn=longitudinal_collate_2D)
-            ### Fit the longitudinal mixed effect model
-            predicted_latent_variables = None
-            timepoints_of_projection = None
+
+        ### Fit the longitudinal mixed effect model
+        predicted_latent_variables = None
+        timepoints_of_projection = None
+        if longitudinal_estimator is not None:
+            longitudinal_estimator, encodings_df = fit_longitudinal_estimator_on_nn(train_data_loader, model, device,
+                                                                                    longitudinal_estimator,
+                                                                                    longitudinal_estimator_settings)
+            timepoints_of_projection, predicted_latent_variables = project_encodings_for_training(encodings_df,
+                                                                                                longitudinal_estimator)
+        
+        # Training step
+        for data in train_data_loader:
+            nb_batch += 1
+            optimizer.zero_grad()
+            x = data[0].to(device).float()
+            mu, logVar, reconstructed, encoded = model(x)
+            reconstruction_loss, kl_loss = spatial_loss(mu, logVar, reconstructed, x)
+
+            loss = reconstruction_loss + model.beta * kl_loss
             if longitudinal_estimator is not None:
-                longitudinal_estimator, encodings_df = fit_longitudinal_estimator_on_nn(data_loader, model, device,
-                                                                                        longitudinal_estimator,
-                                                                                        longitudinal_estimator_settings)
-                timepoints_of_projection, predicted_latent_variables = project_encodings_for_training(encodings_df,
-                                                                                                    longitudinal_estimator)
-            
-            for data in data_loader:
-                nb_batch += 1
-                optimizer.zero_grad()
-                x = data[0].to(device).float()
-                mu, logVar, reconstructed, encoded = model(x)
-                reconstruction_loss, kl_loss = spatial_loss(mu, logVar, reconstructed, x)
-
-                loss = reconstruction_loss + model.beta * kl_loss
-                if longitudinal_estimator is not None:
-                    alignment_loss = longitudinal_loss(mu, torch.cat(([
-                        torch.tensor(predicted_latent_variables[str(subject_id)]).float().to(device) for subject_id in
-                        data[2]])))
-                    loss += model.gamma * alignment_loss
-                    total_alignment_loss += alignment_loss.item()
+                alignment_loss = longitudinal_loss(mu, torch.cat(([
+                    torch.tensor(predicted_latent_variables[str(subject_id)]).float().to(device) for subject_id in
+                    data[2]])))
+                loss += model.gamma * alignment_loss
+                total_alignment_loss += alignment_loss.item()
 
 
-                loss.backward()
-                optimizer.step()
-                lr_scheduler.step()
+            loss.backward()
+            optimizer.step()
+            lr_scheduler.step()
 
-                total_loss.append(loss.item())
-                total_recon_loss += reconstruction_loss.item()
-                total_kl_loss += kl_loss.item()
+            total_loss.append(loss.item())
+            total_recon_loss += reconstruction_loss.item()
+            total_kl_loss += kl_loss.item()
 
         print("\n Reconstruction loss =", total_recon_loss / nb_batch, ", Weighted KL loss =",
               total_kl_loss / nb_batch * model.beta,
@@ -232,14 +240,10 @@ def train_kfold(model, k_folds_index_list, longitudinal_estimator=None,
         train_loss = sum(total_loss) / nb_batch
         epoch_loss = train_loss
 
-        validation_dataset = LongitudinalDataset2D(f'data_csv/train_folds/starmen_train_set_fold_{fold_index}.csv', read_image=open_npy,
-                                           transform=transformations)
-        validation_data_loader = DataLoader(validation_dataset, batch_size=batch_size, num_workers=num_workers, shuffle=False,
-                                    collate_fn=longitudinal_collate_2D)
-        fold_index = fold_index + 1 if fold_index < len(k_folds_index_list) else 0
+        # Validation step
         model.eval()
         model.training = False
-        epoch_loss = test(model, validation_data_loader,
+        epoch_loss = test(model, valid_data_loader,
                             longitudinal_estimator=longitudinal_estimator,
                             device=device,
                             spatial_loss=spatial_loss)

@@ -11,6 +11,8 @@ def numpy_to_tensor(img):
     tensor = torch.from_numpy(img.round()).float()
     return tensor
 
+def open_npy(path):
+    return torch.from_numpy(np.load(path)).float()
 
 class Dataset2D(Dataset):
     """
@@ -18,8 +20,14 @@ class Dataset2D(Dataset):
     """
 
     def __init__(self, summary_file, transform=None, target_transform=None,
-                 read_image=lambda x: torch.Tensor(plt.imshow(x))):
-        self.summary_dataframe = pd.read_csv(summary_file)
+                 read_image=open_npy):      # read_image=lambda x: torch.Tensor(plt.imshow(x))
+        if type(summary_file) == str:
+            self.summary_dataframe = pd.read_csv(summary_file)
+        elif type(summary_file) == pd.core.frame.DataFrame:
+            self.summary_dataframe = summary_file
+        else:
+            print("Error type when loading data, check file name or type")
+            exit()
         self.transform = transforms.Compose([
             transforms.ToTensor(),
             transforms.Lambda(lambda x: x.to(torch.float32))

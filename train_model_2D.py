@@ -120,10 +120,10 @@ os.makedirs(os.path.dirname(output_path), exist_ok=True)
 
 
 # Training of the vanilla VAE
-validation_dataset = Dataset2D('data_csv/starmen_validation_set.csv', read_image=open_npy,
-                                   transform=transformations)
-easy_dataset = Dataset2D('data_csv/starmen_train_set.csv', read_image=open_npy,
-                         transform=transformations)
+# validation_dataset = Dataset2D('data_csv/starmen_validation_set.csv', read_image=open_npy,
+#                                    transform=transformations)
+# easy_dataset = Dataset2D('data_csv/starmen_train_set.csv', read_image=open_npy,
+#                          transform=transformations)
 
 # data_loader = DataLoader(easy_dataset, batch_size=batch_size, num_workers=num_worker, shuffle=True, pin_memory=True, )
 # validation_data_loader = DataLoader(validation_dataset, batch_size=batch_size, num_workers=num_worker, shuffle=True,
@@ -134,7 +134,7 @@ easy_dataset = Dataset2D('data_csv/starmen_train_set.csv', read_image=open_npy,
 #                          loss_graph_saving_path=None, spatial_loss=loss_function,
 #                          validation_data_loader=validation_data_loader)
 
-all_losses, _ = train_AE_kfold(model, folds_index, nb_epochs=500, device=device,
+all_losses, _ = train_AE_kfold(model, folds_index, nb_epochs=1, device=device,
                          nn_saving_path=nn_saving_path,
                          loss_graph_saving_path=None, spatial_loss=loss_function,
                          batch_size=batch_size, num_workers=num_worker)
@@ -168,7 +168,7 @@ validation_data_loader = DataLoader(validation_dataset, batch_size=batch_size, n
 #                           loss_graph_saving_path=f"{output_path}/loss_longitudinal_only.pdf", previous_best_loss=best_loss,
 #                           spatial_loss=loss_function, validation_data_loader=validation_data_loader)
 
-best_loss, lvae_losses = train_kfold(model, folds_index, test_saem_estimator, algo_settings, nb_epochs=300,
+best_loss, lvae_losses = train_kfold(model, folds_index, test_saem_estimator, algo_settings, nb_epochs=9,
                           lr=initial_lr,
                           nn_saving_path=nn_saving_path + f"2", longitudinal_saving_path=longitudinal_saving_path,
                           loss_graph_saving_path=f"{output_path}/loss_longitudinal_only.pdf", previous_best_loss=best_loss,

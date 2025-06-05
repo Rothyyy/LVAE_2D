@@ -4,6 +4,7 @@ from tqdm import tqdm
 import time
 import matplotlib.pyplot as plt
 import numpy as np
+import pandas as pd
 import os
 import sys
 import torchvision.transforms as transforms
@@ -13,8 +14,6 @@ from torch.utils.data import DataLoader
 from nnModels.losses import spatial_auto_encoder_loss, loss_bvae, loss_bvae2
 from torch.optim.lr_scheduler import CosineAnnealingWarmRestarts
 
-def open_npy(path):
-    return torch.from_numpy(np.load(path)).float()
 
 def train_AE(model, data_loader, nb_epochs=100, device='cuda' if torch.cuda.is_available() else 'cpu',
              nn_saving_path=None, loss_graph_saving_path=None, spatial_loss=spatial_auto_encoder_loss,
@@ -106,42 +105,50 @@ def train_AE_kfold(model, k_folds_index_list, nb_epochs=100, device='cuda' if to
     best_val_loss = float('inf')
     iterator = tqdm(range(1, nb_epochs + 1), desc="Training", file=sys.stdout)
 
-    
-    fold_index = 0      # The index of the fold to use a validation set
+    folds_df_list = [pd.read_csv(f"data_csv/train_folds/starmen_train_set_fold_{i}.csv") for i in k_folds_index_list]
+    nb_epochs_without_loss_improvement = 0
+    valid_index = 0
     for epoch in iterator:
         model.train()
         model.training = True
         train_loss = []
-        train_index_list = k_folds_index_list.copy()
-        train_index_list.pop(fold_index)
 
-        for i in train_index_list:
-            fold_dataset = Dataset2D(f"data_csv/train_folds/starmen_train_set_fold_{i}.csv", read_image=open_npy, transform=transformations)
-            data_loader = DataLoader(fold_dataset, num_workers=num_workers, shuffle=True, pin_memory=True)
-            for x in data_loader:
-                optimizer.zero_grad()
-                x = x.to(device)
+        # Selecting validation and training dataframe
+        valid_df = folds_df_list[valid_index]
+        train_df = pd.concat([ folds_df_list[i] for i in range(len(folds_df_list)) if i != valid_index ], ignore_index=True)
+        
+        # Loading them in the Dataset2D class
+        valid_dataset = Dataset2D(valid_df, transform=transformations)
+        train_dataset = Dataset2D(train_df, transform=transformations)
 
-                mu, logvar, recon_x, _ = model(x)
-                reconstruction_loss, kl_loss = spatial_loss(mu, logvar, recon_x, x)
-                loss = reconstruction_loss + kl_loss * model.beta
-                loss.backward()
-                optimizer.step()
-                lr_scheduler.step()
-                train_loss.append(loss.item())
+        # Create the DataLoader
+        valid_data_loader = DataLoader(valid_dataset, batch_size=batch_size, num_workers=num_workers, shuffle=True, pin_memory=True)
+        train_data_loader = DataLoader(train_dataset, batch_size=batch_size, num_workers=num_workers, shuffle=True, pin_memory=True)
+
+        valid_index = valid_index + 1 if valid_index < len(k_folds_index_list)-1 else 0
+
+        # Training step
+        for x in train_data_loader:
+            optimizer.zero_grad()
+            x = x.to(device)
+
+            mu, logvar, recon_x, _ = model(x)
+            reconstruction_loss, kl_loss = spatial_loss(mu, logvar, recon_x, x)
+            loss = reconstruction_loss + kl_loss * model.beta
+            loss.backward()
+            optimizer.step()
+            lr_scheduler.step()
+            train_loss.append(loss.item())
 
         train_mean_loss = sum(train_loss) / len(train_loss)
         val_mean_loss = train_mean_loss
 
         # Validation step
-        validation_fold = Dataset2D(f"data_csv/train_folds/starmen_train_set_fold_{fold_index}.csv")
-        validation_data_loader = DataLoader(validation_fold, num_workers=num_workers, shuffle=True, pin_memory=True)
-        fold_index = fold_index + 1 if fold_index < len(k_folds_index_list) else 0
         model.eval()
         model.training = False
         val_loss = []
         with torch.no_grad():
-            for x in validation_data_loader:
+            for x in valid_data_loader:
                 x = x.to(device)
                 mu, logvar, recon_x, _ = model(x)
                 reconstruction_loss, kl_loss = spatial_loss(mu, logvar, recon_x, x)
@@ -156,14 +163,20 @@ def train_AE_kfold(model, k_folds_index_list, nb_epochs=100, device='cuda' if to
 
         # Save model if validation loss decreased
         if val_mean_loss < best_val_loss:
+            nb_epochs_without_loss_improvement = 0
             best_val_loss = val_mean_loss
             torch.save(model.state_dict(), nn_saving_path)
+        else:
+            nb_epochs_without_loss_improvement += 1
+        
+        if nb_epochs_without_loss_improvement >= 30:
+            break
+
         plt.plot(np.arange(1, len(losses) + 1), losses)
         if loss_graph_saving_path is not None:
             os.makedirs(os.path.dirname(loss_graph_saving_path), exist_ok=True)
             plt.savefig(loss_graph_saving_path)
         plt.show()
         
-    fold_index = fold_index + 1 if fold_index < 8 else 0
 
     return losses, best_val_loss

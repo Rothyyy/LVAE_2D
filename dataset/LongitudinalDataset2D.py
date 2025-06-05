@@ -1,14 +1,24 @@
 import torch
+import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 from torch.utils.data import Dataset
 
 
+def open_npy(path):
+    return torch.from_numpy(np.load(path)).float()
+
 class LongitudinalDataset2D(Dataset):
     # TODO: add to readme how to format the csv file
     def __init__(self, summary_file, transform=None, target_transform=None,
-                 read_image=lambda x: torch.Tensor(plt.imshow(x))):
-        self.summary_dataframe = pd.read_csv(summary_file).sort_values(['subject_id', 'age'])
+                 read_image=open_npy):     # read_image=lambda x: torch.Tensor(plt.imshow(x))
+        if type(summary_file) == str:
+            self.summary_dataframe = pd.read_csv(summary_file).sort_values(['subject_id', 'age'])
+        elif type(summary_file) == pd.core.frame.DataFrame:
+            self.summary_dataframe = summary_file.sort_values(['subject_id', 'age'])
+        else:
+            print("Error type when loading data, check file name or type")
+            exit()
         self.transform = transform
         self.target_transform = target_transform
         self.read_image = read_image
