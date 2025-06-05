@@ -68,7 +68,6 @@ def plot_comparison(original_image, reconstructed_image_VAE, reconstructed_image
     # binary_mask = (residual_images_VAE_LVAE > mask_threshold).to(torch.uint8)
     binary_input_VAE = (residual_input_VAE > mask_threshold).to(torch.uint8)
     binary_input_LVAE = (residual_input_LVAE > mask_threshold).to(torch.uint8)
-    print(binary_input_LVAE.max())
     binary_overlay = torch.zeros((10,64,64,3))
     for i in range(10):
         binary_overlay[i,:,:,0] = binary_input_LVAE[i,:,:]
@@ -112,7 +111,7 @@ if __name__=="__main__":
     parser.add_argument("-a", "--anomaly", type=str, required=False, default="original")
     parser.add_argument("--beta", type=float, required=False, default=5)
     parser.add_argument("-n", type=int, required=False, default=3)
-    parser.add_argument('f', '--freeze', type=str, required=False, default='y',
+    parser.add_argument('-f', '--freeze', type=str, required=False, default='y',
                         help='freeze convolution layer ? default = y')
     parser.add_argument('--dataset', type=str, required=False, default="noacc",
                         help='Use the models trained on dataset "acc" or "noacc"')    

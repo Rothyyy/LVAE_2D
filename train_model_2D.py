@@ -13,13 +13,14 @@ from longitudinalModel.fit_longitudinal_estimator_on_nn import fit_longitudinal_
 from nnModels.CVAE2D import CVAE2D
 from longitudinalModel.train import train
 from dataset.group_based_train_test_split import group_based_train_test_split
+from dataset.split_k_folds import train_k_folds_split
 
 from nnModels.CVAE2D_ORIGINAL import CVAE2D_ORIGINAL
 from nnModels.losses import spatial_auto_encoder_loss
 
 from utils_display.display_individual_observations_2D import display_individual_observations_2D
 from dataset.LongitudinalDataset2D import LongitudinalDataset2D, longitudinal_collate_2D
-from nnModels.train_AE import train_AE
+from nnModels.train_AE import train_AE, train_AE_kfold
 """
 Script to train the full model. Neural network model + longitudinal estimator
 """
@@ -58,20 +59,26 @@ args = parser.parse_args()
 
 # First we get the different train/validation/test dataset
 df = pd.read_csv(args.data)
-if not(os.path.isfile("data_csv/starmen_train_set.csv")) and not(os.path.isfile("data_csv/starmen_test_set.csv")) and not(os.path.isfile("data_csv/starmen_validation_set.csv")):
-    # Split the data into train (80%) and test (20%) sets
-    train_val_df, test_df = group_based_train_test_split(df, test_size=0.2, group_col='subject_id', random_state=42)
-    train_df, validation_df = group_based_train_test_split(train_val_df, test_size=0.125, group_col='subject_id', random_state=42)
-    # Save the training set to a CSV file
-    train_df.to_csv('data_csv/starmen_train_set.csv', index=False)
-    validation_df.to_csv('data_csv/starmen_validation_set.csv', index=False)
-    # Save the test set to a CSV file
-    test_df.to_csv('data_csv/starmen_test_set.csv', index=False)
+
+# if not(os.path.isfile("data_csv/starmen_train_set.csv")) and not(os.path.isfile("data_csv/starmen_test_set.csv")) and not(os.path.isfile("data_csv/starmen_validation_set.csv")):
+#     # Split the data into train (80%) and test (20%) sets
+#     train_val_df, test_df = group_based_train_test_split(df, test_size=0.2, group_col='subject_id', random_state=42)
+
+#     train_df, validation_df = group_based_train_test_split(train_val_df, test_size=0.125, group_col='subject_id', random_state=42)
+#     # Save the training set to a CSV file
+#     train_df.to_csv('data_csv/starmen_train_set.csv', index=False)
+#     validation_df.to_csv('data_csv/starmen_validation_set.csv', index=False)
+#     # Save the test set to a CSV file
+#     test_df.to_csv('data_csv/starmen_test_set.csv', index=False)
+
+train_val_df, test_df = group_based_train_test_split(df, test_size=0.2, group_col='subject_id', random_state=42)
+test_df.to_csv('data_csv/starmen_test_set.csv', index=False)
+folds_index = train_k_folds_split(train_val_df, 8)
 
 ###  Hyperparameters of the Variational autoencoder model
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 print("device = ", device)
-num_worker = round(os.cpu_count()/6)   # For faster GPU training
+num_worker = round(os.cpu_count()/4)   # For faster GPU training
 
 batch_size = args.batch_size
 latent_representation_size = args.dimension
@@ -104,16 +111,8 @@ algo_final_fitting_settings = AlgorithmSettings('mcmc_saem', n_iter=10000, seed=
 # Preparation of the data
 transformations = transforms.Compose([])
 
-
 def open_npy(path):
     return torch.from_numpy(np.load(path)).float()
-
-
-# If we want to remove existing checkpoints
-# folder_path = 'saved_models_2D'
-# for file_name in os.listdir(folder_path):
-#     file_path = os.path.join(folder_path, file_name)
-#     os.unlink(file_path)
 
 
 output_path = f"training_plots/{args.nnmodel_name}_{temp_args.dimension}_{temp_args.beta}_{temp_args.gamma}_{args.iterations}/"
@@ -126,15 +125,19 @@ validation_dataset = Dataset2D('data_csv/starmen_validation_set.csv', read_image
 easy_dataset = Dataset2D('data_csv/starmen_train_set.csv', read_image=open_npy,
                          transform=transformations)
 
-data_loader = DataLoader(easy_dataset, batch_size=batch_size, num_workers=num_worker, shuffle=True, pin_memory=True, )
-validation_data_loader = DataLoader(validation_dataset, batch_size=batch_size, num_workers=num_worker, shuffle=True,
-                                    pin_memory=True, )
+# data_loader = DataLoader(easy_dataset, batch_size=batch_size, num_workers=num_worker, shuffle=True, pin_memory=True, )
+# validation_data_loader = DataLoader(validation_dataset, batch_size=batch_size, num_workers=num_worker, shuffle=True,
+#                                     pin_memory=True, )
 
-all_losses, _ = train_AE(model, data_loader, nb_epochs=300, device=device,
+# all_losses, _ = train_AE(model, data_loader, nb_epochs=300, device=device,
+#                          nn_saving_path=nn_saving_path,
+#                          loss_graph_saving_path=None, spatial_loss=loss_function,
+#                          validation_data_loader=validation_data_loader)
+
+all_losses, _ = train_AE_kfold(model, folds_index, nb_epochs=2, device=device,
                          nn_saving_path=nn_saving_path,
                          loss_graph_saving_path=None, spatial_loss=loss_function,
-                         validation_data_loader=validation_data_loader)
-
+                         batch_size=batch_size, num_workers=num_worker)
 
 model.to(device)
 plt.plot(np.arange(1, len(all_losses) + 1), all_losses, label="Train loss (VAE)")
@@ -159,7 +162,7 @@ data_loader = DataLoader(easy_dataset, batch_size=batch_size, num_workers=num_wo
                          collate_fn=longitudinal_collate_2D)
 validation_data_loader = DataLoader(validation_dataset, batch_size=batch_size, num_workers=num_worker, shuffle=False,
                                     collate_fn=longitudinal_collate_2D)
-best_loss, lvae_losses = train(model, data_loader, test_saem_estimator, algo_settings, nb_epochs=300,
+best_loss, lvae_losses = train(model, data_loader, test_saem_estimator, algo_settings, nb_epochs=600,
                           lr=initial_lr,
                           nn_saving_path=nn_saving_path + f"2", longitudinal_saving_path=longitudinal_saving_path,
                           loss_graph_saving_path=f"{output_path}/loss_longitudinal_only.pdf", previous_best_loss=best_loss,

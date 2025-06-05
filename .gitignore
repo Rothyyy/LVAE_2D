@@ -3,3 +3,4 @@ __pycache__/
 data_starmen/anomaly_images/*.npy
 plots_storage
 *.sh
+*.zip
