@@ -11,7 +11,7 @@ import os
 from dataset.Dataset2D import Dataset2D
 from longitudinalModel.fit_longitudinal_estimator_on_nn import fit_longitudinal_estimator_on_nn
 from nnModels.CVAE2D import CVAE2D
-from longitudinalModel.train import train
+from longitudinalModel.train import train, train_kfold
 from dataset.group_based_train_test_split import group_based_train_test_split
 from dataset.split_k_folds import train_k_folds_split
 
@@ -134,7 +134,7 @@ easy_dataset = Dataset2D('data_csv/starmen_train_set.csv', read_image=open_npy,
 #                          loss_graph_saving_path=None, spatial_loss=loss_function,
 #                          validation_data_loader=validation_data_loader)
 
-all_losses, _ = train_AE_kfold(model, folds_index, nb_epochs=2, device=device,
+all_losses, _ = train_AE_kfold(model, folds_index, nb_epochs=500, device=device,
                          nn_saving_path=nn_saving_path,
                          loss_graph_saving_path=None, spatial_loss=loss_function,
                          batch_size=batch_size, num_workers=num_worker)
@@ -162,11 +162,17 @@ data_loader = DataLoader(easy_dataset, batch_size=batch_size, num_workers=num_wo
                          collate_fn=longitudinal_collate_2D)
 validation_data_loader = DataLoader(validation_dataset, batch_size=batch_size, num_workers=num_worker, shuffle=False,
                                     collate_fn=longitudinal_collate_2D)
-best_loss, lvae_losses = train(model, data_loader, test_saem_estimator, algo_settings, nb_epochs=600,
+# best_loss, lvae_losses = train(model, data_loader, test_saem_estimator, algo_settings, nb_epochs=300,
+#                           lr=initial_lr,
+#                           nn_saving_path=nn_saving_path + f"2", longitudinal_saving_path=longitudinal_saving_path,
+#                           loss_graph_saving_path=f"{output_path}/loss_longitudinal_only.pdf", previous_best_loss=best_loss,
+#                           spatial_loss=loss_function, validation_data_loader=validation_data_loader)
+
+best_loss, lvae_losses = train_kfold(model, folds_index, test_saem_estimator, algo_settings, nb_epochs=300,
                           lr=initial_lr,
                           nn_saving_path=nn_saving_path + f"2", longitudinal_saving_path=longitudinal_saving_path,
                           loss_graph_saving_path=f"{output_path}/loss_longitudinal_only.pdf", previous_best_loss=best_loss,
-                          spatial_loss=loss_function, validation_data_loader=validation_data_loader)
+                          spatial_loss=loss_function, batch_size=batch_size, num_workers=num_worker)
 test_saem_estimator = Leaspy.load(longitudinal_saving_path)
 model.load_state_dict(torch.load(nn_saving_path + "2", map_location='cpu'))
 
