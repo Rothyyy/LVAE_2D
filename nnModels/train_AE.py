@@ -10,6 +10,7 @@ import sys
 import torchvision.transforms as transforms
 from dataset.Dataset2D import Dataset2D
 from torch.utils.data import DataLoader
+from nnModels.CVAE2D import CVAE2D
 
 from nnModels.losses import spatial_auto_encoder_loss, loss_bvae, loss_bvae2
 from torch.optim.lr_scheduler import CosineAnnealingWarmRestarts
@@ -84,8 +85,10 @@ def train_AE(model, data_loader, nb_epochs=100, device='cuda' if torch.cuda.is_a
 
     return losses, best_val_loss
 
-def train_AE_kfold(model, k_folds_index_list, nb_epochs=100, device='cuda' if torch.cuda.is_available() else 'cpu',
-             nn_saving_path=None, loss_graph_saving_path=None, spatial_loss=spatial_auto_encoder_loss, batch_size=256, num_workers=round(os.cpu_count()/4)):
+def train_AE_kfold(model_type, k_folds_index_list, nb_epochs=100, device='cuda' if torch.cuda.is_available() else 'cpu',
+             nn_saving_path=None, loss_graph_saving_path=None, spatial_loss=spatial_auto_encoder_loss, 
+             batch_size=256, num_workers=round(os.cpu_count()/4), 
+             latent_dimension=4, gamma=100, beta=5):
     """
     Trains a variational autoencoder. Nothing longitudinal.
     The goal here is because an AE just requires image to train, it's easier to train and used already implemented
@@ -96,18 +99,11 @@ def train_AE_kfold(model, k_folds_index_list, nb_epochs=100, device='cuda' if to
     :args: nb_epochs: number of epochs for training
     :args: device: device used to do the variational autoencoder training
     """
-    optimizer = optim.Adam(model.parameters())
-    lr_scheduler = CosineAnnealingWarmRestarts(optimizer, T_0=1, T_mult=2, eta_min=1e-8)
-    model.to(device)
-    model.device = device
-    transformations = transforms.Compose([])
-    losses = []
-    best_val_loss = float('inf')
-    iterator = tqdm(range(1, nb_epochs + 1), desc="Training", file=sys.stdout)
 
     folds_df_list = [pd.read_csv(f"data_csv/train_folds/starmen_train_set_fold_{i}.csv") for i in k_folds_index_list]
     nb_epochs_without_loss_improvement = 0
     valid_index = 0
+    transformations = transforms.Compose([])
     for valid_index in range(len(folds_df_list)):
         # Selecting validation and training dataframe
         valid_df = folds_df_list[valid_index]
@@ -120,6 +116,20 @@ def train_AE_kfold(model, k_folds_index_list, nb_epochs=100, device='cuda' if to
         # Create the DataLoader
         valid_data_loader = DataLoader(valid_dataset, batch_size=batch_size, num_workers=num_workers, shuffle=True, pin_memory=True)
         train_data_loader = DataLoader(train_dataset, batch_size=batch_size, num_workers=num_workers, shuffle=True, pin_memory=True)
+
+        # Initialize the model
+        model = model_type(latent_dimension)
+        model.gamma = gamma
+        model.beta = beta
+        model.to(device)
+        optimizer = optim.Adam(model.parameters())
+        lr_scheduler = CosineAnnealingWarmRestarts(optimizer, T_0=1, T_mult=2, eta_min=1e-8)
+        model.to(device)
+        model.device = device
+
+        losses = []
+        best_val_loss = float('inf')
+        iterator = tqdm(range(1, nb_epochs + 1), desc="Training", file=sys.stdout)
 
         for epoch in iterator:
             model.train()
@@ -164,7 +174,7 @@ def train_AE_kfold(model, k_folds_index_list, nb_epochs=100, device='cuda' if to
             if val_mean_loss < best_val_loss:
                 nb_epochs_without_loss_improvement = 0
                 best_val_loss = val_mean_loss
-                torch.save(model.state_dict(), f"fold_{valid_index}"+nn_saving_path)
+                torch.save(model.state_dict(), nn_saving_path + f"_fold_{valid_index}.pth")
             else:
                 nb_epochs_without_loss_improvement += 1
             
@@ -173,9 +183,10 @@ def train_AE_kfold(model, k_folds_index_list, nb_epochs=100, device='cuda' if to
 
             plt.plot(np.arange(1, len(losses) + 1), losses)
             if loss_graph_saving_path is not None:
-                os.makedirs(os.path.dirname(loss_graph_saving_path), exist_ok=True)
-                plt.savefig(loss_graph_saving_path + "fold_{valid_index}.pdf")
+                os.makedirs(loss_graph_saving_path, exist_ok=True)
+                plt.savefig(loss_graph_saving_path + f"fold_{valid_index}.pdf")
             plt.show()
+            plt.clf()
         
 
     return losses, best_val_loss

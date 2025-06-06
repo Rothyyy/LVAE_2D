@@ -10,7 +10,7 @@ import os
 
 from dataset.Dataset2D import Dataset2D
 from longitudinalModel.fit_longitudinal_estimator_on_nn import fit_longitudinal_estimator_on_nn
-from nnModels.CVAE2D import CVAE2D
+# from nnModels.CVAE2D import CVAE2D
 from longitudinalModel.train import train, train_kfold
 from dataset.group_based_train_test_split import group_based_train_test_split
 from dataset.split_k_folds import train_k_folds_split
@@ -127,6 +127,7 @@ def open_npy(path):
 output_path = f"training_plots/dataset_{temp_args.dataset}/{freeze_path}{folds_path}/{args.nnmodel_name}_{temp_args.dimension}_{temp_args.beta}_{temp_args.gamma}_{args.iterations}/"
 os.makedirs(os.path.dirname(output_path), exist_ok=True)
 
+os.makedirs(os.path.dirname(nn_saving_path), exist_ok=True)
 
 # Training of the vanilla VAE
 if args.kf != 'y':
@@ -151,58 +152,60 @@ if args.kf != 'y':
     plt.show()
 
 else:
-    all_losses, _ = train_AE_kfold(model, folds_index, nb_epochs=500, device=device,
+    all_losses, _ = train_AE_kfold(CVAE2D_ORIGINAL, folds_index, nb_epochs=500, device=device,
                             nn_saving_path=nn_saving_path,
-                            loss_graph_saving_path=None, spatial_loss=loss_function,
-                            batch_size=batch_size, num_workers=num_worker)
+                            loss_graph_saving_path=output_path, spatial_loss=loss_function,
+                            batch_size=batch_size, num_workers=num_worker,
+                            latent_dimension=latent_representation_size, gamma=gamma, beta=beta)
 
 
 
 
 
-# Training of the Longitudinal VAE
-model.load_state_dict(torch.load(nn_saving_path, map_location='cpu'))
-if args.freeze == "y":
-    model.freeze_conv()
-best_loss = 1e15
-validation_dataset = LongitudinalDataset2D('data_csv/starmen_validation_set.csv', read_image=open_npy,
-                                           transform=transformations)
-easy_dataset = LongitudinalDataset2D('data_csv/starmen_train_set.csv', read_image=open_npy,
-                                     transform=transformations)
+# # Training of the Longitudinal VAE
+# model.load_state_dict(torch.load(nn_saving_path, map_location='cpu'))
+# if args.freeze == "y":
+#     model.freeze_conv()
+# best_loss = 1e15
+# validation_dataset = LongitudinalDataset2D('data_csv/starmen_validation_set.csv', read_image=open_npy,
+#                                            transform=transformations)
+# easy_dataset = LongitudinalDataset2D('data_csv/starmen_train_set.csv', read_image=open_npy,
+#                                      transform=transformations)
 
-data_loader = DataLoader(easy_dataset, batch_size=batch_size, num_workers=num_worker, shuffle=False,
-                         collate_fn=longitudinal_collate_2D)
-validation_data_loader = DataLoader(validation_dataset, batch_size=batch_size, num_workers=num_worker, shuffle=False,
-                                    collate_fn=longitudinal_collate_2D)
-if args.kf != 'y':
-    best_loss, lvae_losses = train(model, data_loader, test_saem_estimator, algo_settings, nb_epochs=300,
-                            lr=initial_lr,
-                            nn_saving_path=nn_saving_path + f"2", longitudinal_saving_path=longitudinal_saving_path,
-                            loss_graph_saving_path=f"{output_path}/loss_longitudinal_only.pdf", previous_best_loss=best_loss,
-                            spatial_loss=loss_function, validation_data_loader=validation_data_loader)
+# data_loader = DataLoader(easy_dataset, batch_size=batch_size, num_workers=num_worker, shuffle=False,
+#                          collate_fn=longitudinal_collate_2D)
+# validation_data_loader = DataLoader(validation_dataset, batch_size=batch_size, num_workers=num_worker, shuffle=False,
+#                                     collate_fn=longitudinal_collate_2D)
+# os.makedirs(os.path.dirname(longitudinal_saving_path), exist_ok=True)
+# if args.kf != 'y':
+#     best_loss, lvae_losses = train(model, data_loader, test_saem_estimator, algo_settings, nb_epochs=300,
+#                             lr=initial_lr,
+#                             nn_saving_path=nn_saving_path + f"2", longitudinal_saving_path=longitudinal_saving_path,
+#                             loss_graph_saving_path=f"{output_path}/loss_longitudinal_only.pdf", previous_best_loss=best_loss,
+#                             spatial_loss=loss_function, validation_data_loader=validation_data_loader)
 
-    plt.plot(np.arange(len(all_losses), len(all_losses) + len(lvae_losses)), lvae_losses, label="Train loss (LVAE)")
-    plt.grid(True)
-    plt.legend()
-    plt.savefig(f"{output_path}loss_LVAE_{freeze_path}.pdf")
-    plt.show()
+#     plt.plot(np.arange(len(all_losses), len(all_losses) + len(lvae_losses)), lvae_losses, label="Train loss (LVAE)")
+#     plt.grid(True)
+#     plt.legend()
+#     plt.savefig(f"{output_path}loss_LVAE_{freeze_path}.pdf")
+#     plt.show()
 
-else:
-    best_loss, lvae_losses = train_kfold(model, folds_index, test_saem_estimator, algo_settings, nb_epochs=300,
-                            lr=initial_lr,
-                            nn_saving_path=nn_saving_path + f"2", longitudinal_saving_path=longitudinal_saving_path,
-                            loss_graph_saving_path=f"{output_path}/loss_longitudinal_only", previous_best_loss=best_loss,
-                            spatial_loss=loss_function, batch_size=batch_size, num_workers=num_worker)
-test_saem_estimator = Leaspy.load(longitudinal_saving_path)
-model.load_state_dict(torch.load(nn_saving_path + "2", map_location='cpu'))
+# else:
+#     best_loss, lvae_losses = train_kfold(CVAE2D_ORIGINAL, folds_index, test_saem_estimator, algo_settings, nb_epochs=300,
+#                             lr=initial_lr,
+#                             nn_saving_path=nn_saving_path + f"2", longitudinal_saving_path=longitudinal_saving_path,
+#                             loss_graph_saving_path=f"{output_path}/loss_longitudinal_only", previous_best_loss=best_loss,
+#                             spatial_loss=loss_function, batch_size=batch_size, num_workers=num_worker)
+# test_saem_estimator = Leaspy.load(longitudinal_saving_path)
+# model.load_state_dict(torch.load(nn_saving_path + "2", map_location='cpu'))
 
 
-if args.kf != 'y':
-    # Using the trained LVAE to do some projection
-    algo_settings = AlgorithmSettings('mcmc_saem', n_iter=30000, seed=45, noise_model="gaussian_diagonal")
-    results_estimator, _ = fit_longitudinal_estimator_on_nn(data_loader, model, device, test_saem_estimator,
-                                                            algo_settings)
-    results_estimator.save(longitudinal_saving_path + "2")
+# if args.kf != 'y':
+#     # Using the trained LVAE to do some projection
+#     algo_settings = AlgorithmSettings('mcmc_saem', n_iter=30000, seed=45, noise_model="gaussian_diagonal")
+#     results_estimator, _ = fit_longitudinal_estimator_on_nn(data_loader, model, device, test_saem_estimator,
+#                                                             algo_settings)
+#     results_estimator.save(longitudinal_saving_path + "2")
 
 # display_individual_observations_2D(model, 9, './data_csv/starmen_dataset.csv',
 #                                            fitted_longitudinal_estimator=results_estimator,

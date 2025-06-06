@@ -13,6 +13,7 @@ from longitudinalModel.fit_longitudinal_estimator_on_nn import fit_longitudinal_
 from nnModels.losses import longitudinal_loss, spatial_auto_encoder_loss
 from torch.optim.lr_scheduler import CosineAnnealingWarmRestarts
 import torch.nn.functional as F
+from nnModels.CVAE2D_ORIGINAL import CVAE2D_ORIGINAL
 
 import torchvision.transforms as transforms
 from dataset.Dataset2D import Dataset2D
@@ -155,21 +156,15 @@ def train(model, data_loader, longitudinal_estimator=None,
 
 
 
-def train_kfold(model, k_folds_index_list, longitudinal_estimator=None,
-          longitudinal_estimator_settings=None, nb_epochs=100, lr=0.01,
+def train_kfold(model_type, k_folds_index_list, longitudinal_estimator=None,
+          longitudinal_estimator_settings=None, nb_epochs=100, lr=0.01, freeze = True,
           device='cuda' if torch.cuda.is_available() else 'cpu', nn_saving_path=None, longitudinal_saving_path=None,
           loss_graph_saving_path=None, previous_best_loss=1e15, spatial_loss=spatial_auto_encoder_loss,
-          batch_size=256, num_workers=round(os.cpu_count()/4)):
+          batch_size=256, num_workers=round(os.cpu_count()/4),
+          latent_dimension=4, gamma=100, beta=5):
     """
     Same as above but with KFold
     """
-    model.to(device)
-    model.device = device
-    best_loss = previous_best_loss
-    optimizer = optim.Adam(filter(lambda p: p.requires_grad, model.parameters()))
-    lr_scheduler = CosineAnnealingWarmRestarts(optimizer, T_0=1, T_mult=2, eta_min=1e-5)
-    nb_epochs_without_loss_improvement = 0
-    losses = []
     transformations = transforms.Compose([])
 
     iterator = tqdm(range(nb_epochs), desc="Training", file=sys.stdout)
@@ -177,7 +172,20 @@ def train_kfold(model, k_folds_index_list, longitudinal_estimator=None,
     folds_df_list = [pd.read_csv(f"data_csv/train_folds/starmen_train_set_fold_{i}.csv") for i in k_folds_index_list]
 
     for valid_index in range(len(folds_df_list)):
-        # Selecting validation and training dataframe
+        model = model_type(latent_dimension)
+        model.gamma = gamma
+        model.beta = beta
+        model.load_state_dict(torch.load(nn_saving_path+f"_fold_{valid_index}", map_location='cpu'))
+        model.device = device
+        model.to(device)
+
+        best_loss = previous_best_loss
+        optimizer = optim.Adam(filter(lambda p: p.requires_grad, model.parameters()))
+        lr_scheduler = CosineAnnealingWarmRestarts(optimizer, T_0=1, T_mult=2, eta_min=1e-5)
+        nb_epochs_without_loss_improvement = 0
+        losses = []
+
+        iterator = tqdm(range(nb_epochs), desc="Training", file=sys.stdout)        # Selecting validation and training dataframe
         valid_df = folds_df_list[valid_index]
         train_df = pd.concat([ folds_df_list[i] for i in range(len(folds_df_list)) if i != valid_index ], ignore_index=True)
         
@@ -271,4 +279,5 @@ def train_kfold(model, k_folds_index_list, longitudinal_estimator=None,
         plt.legend()
         plt.savefig(f"{loss_graph_saving_path}loss_LVAE_fold_{valid_index}.pdf")
         plt.show()
+        plt.clf()
     return best_loss, losses
