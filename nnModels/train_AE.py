@@ -108,11 +108,7 @@ def train_AE_kfold(model, k_folds_index_list, nb_epochs=100, device='cuda' if to
     folds_df_list = [pd.read_csv(f"data_csv/train_folds/starmen_train_set_fold_{i}.csv") for i in k_folds_index_list]
     nb_epochs_without_loss_improvement = 0
     valid_index = 0
-    for epoch in iterator:
-        model.train()
-        model.training = True
-        train_loss = []
-
+    for valid_index in range(len(folds_df_list)):
         # Selecting validation and training dataframe
         valid_df = folds_df_list[valid_index]
         train_df = pd.concat([ folds_df_list[i] for i in range(len(folds_df_list)) if i != valid_index ], ignore_index=True)
@@ -125,58 +121,61 @@ def train_AE_kfold(model, k_folds_index_list, nb_epochs=100, device='cuda' if to
         valid_data_loader = DataLoader(valid_dataset, batch_size=batch_size, num_workers=num_workers, shuffle=True, pin_memory=True)
         train_data_loader = DataLoader(train_dataset, batch_size=batch_size, num_workers=num_workers, shuffle=True, pin_memory=True)
 
-        valid_index = valid_index + 1 if valid_index < len(k_folds_index_list)-1 else 0
+        for epoch in iterator:
+            model.train()
+            model.training = True
+            train_loss = []
 
-        # Training step
-        for x in train_data_loader:
-            optimizer.zero_grad()
-            x = x.to(device)
-
-            mu, logvar, recon_x, _ = model(x)
-            reconstruction_loss, kl_loss = spatial_loss(mu, logvar, recon_x, x)
-            loss = reconstruction_loss + kl_loss * model.beta
-            loss.backward()
-            optimizer.step()
-            lr_scheduler.step()
-            train_loss.append(loss.item())
-
-        train_mean_loss = sum(train_loss) / len(train_loss)
-        val_mean_loss = train_mean_loss
-
-        # Validation step
-        model.eval()
-        model.training = False
-        val_loss = []
-        with torch.no_grad():
-            for x in valid_data_loader:
+            # Training step
+            for x in train_data_loader:
+                optimizer.zero_grad()
                 x = x.to(device)
+
                 mu, logvar, recon_x, _ = model(x)
                 reconstruction_loss, kl_loss = spatial_loss(mu, logvar, recon_x, x)
                 loss = reconstruction_loss + kl_loss * model.beta
-                val_loss.append(loss.item())
+                loss.backward()
+                optimizer.step()
+                lr_scheduler.step()
+                train_loss.append(loss.item())
 
-            val_mean_loss = sum(val_loss) / len(val_loss)
-        losses.append(val_mean_loss)
-        iterator.set_postfix(
-            {"Epoch": epoch, "Train mean loss": train_mean_loss, "Validation mean loss": val_mean_loss})
-        print("\n")
+            train_mean_loss = sum(train_loss) / len(train_loss)
+            val_mean_loss = train_mean_loss
 
-        # Save model if validation loss decreased
-        if val_mean_loss < best_val_loss:
-            nb_epochs_without_loss_improvement = 0
-            best_val_loss = val_mean_loss
-            torch.save(model.state_dict(), nn_saving_path)
-        else:
-            nb_epochs_without_loss_improvement += 1
-        
-        if nb_epochs_without_loss_improvement >= 30:
-            break
+            # Validation step
+            model.eval()
+            model.training = False
+            val_loss = []
+            with torch.no_grad():
+                for x in valid_data_loader:
+                    x = x.to(device)
+                    mu, logvar, recon_x, _ = model(x)
+                    reconstruction_loss, kl_loss = spatial_loss(mu, logvar, recon_x, x)
+                    loss = reconstruction_loss + kl_loss * model.beta
+                    val_loss.append(loss.item())
 
-        plt.plot(np.arange(1, len(losses) + 1), losses)
-        if loss_graph_saving_path is not None:
-            os.makedirs(os.path.dirname(loss_graph_saving_path), exist_ok=True)
-            plt.savefig(loss_graph_saving_path)
-        plt.show()
+                val_mean_loss = sum(val_loss) / len(val_loss)
+            losses.append(val_mean_loss)
+            iterator.set_postfix(
+                {"Epoch": epoch, "Train mean loss": train_mean_loss, "Validation mean loss": val_mean_loss})
+            print("\n")
+
+            # Save model if validation loss decreased
+            if val_mean_loss < best_val_loss:
+                nb_epochs_without_loss_improvement = 0
+                best_val_loss = val_mean_loss
+                torch.save(model.state_dict(), f"fold_{valid_index}"+nn_saving_path)
+            else:
+                nb_epochs_without_loss_improvement += 1
+            
+            if nb_epochs_without_loss_improvement >= 30:
+                break
+
+            plt.plot(np.arange(1, len(losses) + 1), losses)
+            if loss_graph_saving_path is not None:
+                os.makedirs(os.path.dirname(loss_graph_saving_path), exist_ok=True)
+                plt.savefig(loss_graph_saving_path + "fold_{valid_index}.pdf")
+            plt.show()
         
 
     return losses, best_val_loss

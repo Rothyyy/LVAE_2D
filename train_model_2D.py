@@ -45,35 +45,39 @@ parser.add_argument('-f', '--freeze', type=str, required=True, default='y',
                     help='freeze convolution layer ? default = y')
 parser.add_argument('--dataset', type=str, required=True, default="noacc",
                     help='Use the models trained on dataset "acc" or "noacc"')
+parser.add_argument('-kf', type=str, required=True, default='y',
+                    help='Launch a training with k-folds')
 temp_args, _ = parser.parse_known_args()
 
 freeze_path = "freeze_conv" if temp_args.freeze == 'y' else "no_freeze"
+folds_path = "/folds" if temp_args.kf == 'y' else ""
 
 parser.add_argument('--nnmodel_path', type=str, required=False,
-                    default=f'saved_models_2D/dataset_{temp_args.dataset}/{freeze_path}/{temp_args.nnmodel_name}_{temp_args.dimension}_{temp_args.beta}_{temp_args.gamma}_{temp_args.iterations}.pth',
+                    default=f'saved_models_2D/dataset_{temp_args.dataset}/{freeze_path}{folds_path}/{temp_args.nnmodel_name}_{temp_args.dimension}_{temp_args.beta}_{temp_args.gamma}_{temp_args.iterations}',
                     help='path where the neural network model parameters are saved')
 parser.add_argument('--longitudinal_estimator_path', type=str, required=False,
-                    default=f'saved_models_2D/dataset_{temp_args.dataset}/{freeze_path}/longitudinal_estimator_params_{temp_args.nnmodel_name}_{temp_args.dimension}_{temp_args.beta}_{temp_args.gamma}_{temp_args.iterations}.json',
+                    default=f'saved_models_2D/dataset_{temp_args.dataset}/{freeze_path}{folds_path}/longitudinal_estimator_params_{temp_args.nnmodel_name}_{temp_args.dimension}_{temp_args.beta}_{temp_args.gamma}_{temp_args.iterations}',
                     help='path where the longitudinal estimator parameters are saved')
 args = parser.parse_args()
 
 # First we get the different train/validation/test dataset
 df = pd.read_csv(args.data)
 
-# if not(os.path.isfile("data_csv/starmen_train_set.csv")) and not(os.path.isfile("data_csv/starmen_test_set.csv")) and not(os.path.isfile("data_csv/starmen_validation_set.csv")):
-#     # Split the data into train (80%) and test (20%) sets
-#     train_val_df, test_df = group_based_train_test_split(df, test_size=0.2, group_col='subject_id', random_state=42)
+if args.kf != 'y':
+    if not(os.path.isfile("data_csv/starmen_train_set.csv")) and not(os.path.isfile("data_csv/starmen_test_set.csv")) and not(os.path.isfile("data_csv/starmen_validation_set.csv")):
+        # Split the data into train (80%) and test (20%) sets
+        train_val_df, test_df = group_based_train_test_split(df, test_size=0.2, group_col='subject_id', random_state=42)
 
-#     train_df, validation_df = group_based_train_test_split(train_val_df, test_size=0.125, group_col='subject_id', random_state=42)
-#     # Save the training set to a CSV file
-#     train_df.to_csv('data_csv/starmen_train_set.csv', index=False)
-#     validation_df.to_csv('data_csv/starmen_validation_set.csv', index=False)
-#     # Save the test set to a CSV file
-#     test_df.to_csv('data_csv/starmen_test_set.csv', index=False)
-
-train_val_df, test_df = group_based_train_test_split(df, test_size=0.2, group_col='subject_id', random_state=42)
-test_df.to_csv('data_csv/starmen_test_set.csv', index=False)
-folds_index = train_k_folds_split(train_val_df, 8)
+        train_df, validation_df = group_based_train_test_split(train_val_df, test_size=0.125, group_col='subject_id', random_state=42)
+        # Save the training set to a CSV file
+        train_df.to_csv('data_csv/starmen_train_set.csv', index=False)
+        validation_df.to_csv('data_csv/starmen_validation_set.csv', index=False)
+        # Save the test set to a CSV file
+        test_df.to_csv('data_csv/starmen_test_set.csv', index=False)
+else:
+    train_val_df, test_df = group_based_train_test_split(df, test_size=0.2, group_col='subject_id', random_state=42)
+    test_df.to_csv('data_csv/starmen_test_set.csv', index=False)
+    folds_index = train_k_folds_split(train_val_df, 8)
 
 ###  Hyperparameters of the Variational autoencoder model
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
@@ -85,8 +89,13 @@ latent_representation_size = args.dimension
 gamma = args.gamma
 beta = args.beta
 initial_lr = args.lr
-nn_saving_path = args.nnmodel_path
-longitudinal_saving_path = args.longitudinal_estimator_path
+if args.kf != 'y':
+    nn_saving_path = args.nnmodel_path + ".pth"
+    longitudinal_saving_path = args.longitudinal_estimator_path + ".json"
+else:
+    nn_saving_path = args.nnmodel_path
+    longitudinal_saving_path = args.longitudinal_estimator_path
+
 # HERE TO CHANGE VAE ARCHITECTURE
 model = CVAE2D_ORIGINAL(latent_representation_size)
 model.gamma = gamma
@@ -115,36 +124,39 @@ def open_npy(path):
     return torch.from_numpy(np.load(path)).float()
 
 
-output_path = f"training_plots/{args.nnmodel_name}_{temp_args.dimension}_{temp_args.beta}_{temp_args.gamma}_{args.iterations}/"
+output_path = f"training_plots/dataset_{temp_args.dataset}/{freeze_path}{folds_path}/{args.nnmodel_name}_{temp_args.dimension}_{temp_args.beta}_{temp_args.gamma}_{args.iterations}/"
 os.makedirs(os.path.dirname(output_path), exist_ok=True)
 
 
 # Training of the vanilla VAE
-# validation_dataset = Dataset2D('data_csv/starmen_validation_set.csv', read_image=open_npy,
-#                                    transform=transformations)
-# easy_dataset = Dataset2D('data_csv/starmen_train_set.csv', read_image=open_npy,
-#                          transform=transformations)
+if args.kf != 'y':
+    validation_dataset = Dataset2D('data_csv/starmen_validation_set.csv', read_image=open_npy,
+                                    transform=transformations)
+    easy_dataset = Dataset2D('data_csv/starmen_train_set.csv', read_image=open_npy,
+                            transform=transformations)
 
-# data_loader = DataLoader(easy_dataset, batch_size=batch_size, num_workers=num_worker, shuffle=True, pin_memory=True, )
-# validation_data_loader = DataLoader(validation_dataset, batch_size=batch_size, num_workers=num_worker, shuffle=True,
-#                                     pin_memory=True, )
+    data_loader = DataLoader(easy_dataset, batch_size=batch_size, num_workers=num_worker, shuffle=True, pin_memory=True, )
+    validation_data_loader = DataLoader(validation_dataset, batch_size=batch_size, num_workers=num_worker, shuffle=True,
+                                        pin_memory=True, )
 
-# all_losses, _ = train_AE(model, data_loader, nb_epochs=300, device=device,
-#                          nn_saving_path=nn_saving_path,
-#                          loss_graph_saving_path=None, spatial_loss=loss_function,
-#                          validation_data_loader=validation_data_loader)
+    all_losses, _ = train_AE(model, data_loader, nb_epochs=500, device=device,
+                            nn_saving_path=nn_saving_path,
+                            loss_graph_saving_path=None, spatial_loss=loss_function,
+                            validation_data_loader=validation_data_loader)
+    model.to(device)
+    plt.plot(np.arange(1, len(all_losses) + 1), all_losses, label="Train loss (VAE)")
+    plt.legend()
+    plt.grid(True)
+    plt.savefig(f"{output_path}loss_VAE_{freeze_path}.pdf")
+    plt.show()
 
-all_losses, _ = train_AE_kfold(model, folds_index, nb_epochs=1, device=device,
-                         nn_saving_path=nn_saving_path,
-                         loss_graph_saving_path=None, spatial_loss=loss_function,
-                         batch_size=batch_size, num_workers=num_worker)
+else:
+    all_losses, _ = train_AE_kfold(model, folds_index, nb_epochs=500, device=device,
+                            nn_saving_path=nn_saving_path,
+                            loss_graph_saving_path=None, spatial_loss=loss_function,
+                            batch_size=batch_size, num_workers=num_worker)
 
-model.to(device)
-plt.plot(np.arange(1, len(all_losses) + 1), all_losses, label="Train loss (VAE)")
-plt.legend()
-plt.grid(True)
-plt.savefig(f"{output_path}loss_VAE_{freeze_path}.pdf")
-plt.show()
+
 
 
 
@@ -162,32 +174,35 @@ data_loader = DataLoader(easy_dataset, batch_size=batch_size, num_workers=num_wo
                          collate_fn=longitudinal_collate_2D)
 validation_data_loader = DataLoader(validation_dataset, batch_size=batch_size, num_workers=num_worker, shuffle=False,
                                     collate_fn=longitudinal_collate_2D)
-# best_loss, lvae_losses = train(model, data_loader, test_saem_estimator, algo_settings, nb_epochs=300,
-#                           lr=initial_lr,
-#                           nn_saving_path=nn_saving_path + f"2", longitudinal_saving_path=longitudinal_saving_path,
-#                           loss_graph_saving_path=f"{output_path}/loss_longitudinal_only.pdf", previous_best_loss=best_loss,
-#                           spatial_loss=loss_function, validation_data_loader=validation_data_loader)
+if args.kf != 'y':
+    best_loss, lvae_losses = train(model, data_loader, test_saem_estimator, algo_settings, nb_epochs=300,
+                            lr=initial_lr,
+                            nn_saving_path=nn_saving_path + f"2", longitudinal_saving_path=longitudinal_saving_path,
+                            loss_graph_saving_path=f"{output_path}/loss_longitudinal_only.pdf", previous_best_loss=best_loss,
+                            spatial_loss=loss_function, validation_data_loader=validation_data_loader)
 
-best_loss, lvae_losses = train_kfold(model, folds_index, test_saem_estimator, algo_settings, nb_epochs=9,
-                          lr=initial_lr,
-                          nn_saving_path=nn_saving_path + f"2", longitudinal_saving_path=longitudinal_saving_path,
-                          loss_graph_saving_path=f"{output_path}/loss_longitudinal_only.pdf", previous_best_loss=best_loss,
-                          spatial_loss=loss_function, batch_size=batch_size, num_workers=num_worker)
+    plt.plot(np.arange(len(all_losses), len(all_losses) + len(lvae_losses)), lvae_losses, label="Train loss (LVAE)")
+    plt.grid(True)
+    plt.legend()
+    plt.savefig(f"{output_path}loss_LVAE_{freeze_path}.pdf")
+    plt.show()
+
+else:
+    best_loss, lvae_losses = train_kfold(model, folds_index, test_saem_estimator, algo_settings, nb_epochs=300,
+                            lr=initial_lr,
+                            nn_saving_path=nn_saving_path + f"2", longitudinal_saving_path=longitudinal_saving_path,
+                            loss_graph_saving_path=f"{output_path}/loss_longitudinal_only", previous_best_loss=best_loss,
+                            spatial_loss=loss_function, batch_size=batch_size, num_workers=num_worker)
 test_saem_estimator = Leaspy.load(longitudinal_saving_path)
 model.load_state_dict(torch.load(nn_saving_path + "2", map_location='cpu'))
 
-plt.plot(np.arange(len(all_losses), len(all_losses) + len(lvae_losses)), lvae_losses, label="Train loss (LVAE)")
-plt.grid(True)
-plt.legend()
-plt.savefig(f"{output_path}loss_LVAE_{freeze_path}.pdf")
-plt.show()
 
-
-# Using the trained LVAE to do some projection
-algo_settings = AlgorithmSettings('mcmc_saem', n_iter=30000, seed=45, noise_model="gaussian_diagonal")
-results_estimator, _ = fit_longitudinal_estimator_on_nn(data_loader, model, device, test_saem_estimator,
-                                                        algo_settings)
-results_estimator.save(longitudinal_saving_path + "2")
+if args.kf != 'y':
+    # Using the trained LVAE to do some projection
+    algo_settings = AlgorithmSettings('mcmc_saem', n_iter=30000, seed=45, noise_model="gaussian_diagonal")
+    results_estimator, _ = fit_longitudinal_estimator_on_nn(data_loader, model, device, test_saem_estimator,
+                                                            algo_settings)
+    results_estimator.save(longitudinal_saving_path + "2")
 
 # display_individual_observations_2D(model, 9, './data_csv/starmen_dataset.csv',
 #                                            fitted_longitudinal_estimator=results_estimator,
