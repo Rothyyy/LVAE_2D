@@ -139,7 +139,7 @@ def display_individual_observations_2D(model, subject_id, dataset_csv, transform
     plt.tight_layout()
     os.makedirs(os.path.dirname(save_path), exist_ok=True)
     plt.savefig(save_path)
-    plt.show()
+    plt.clf()
 
 
 if __name__ == "__main__":

@@ -15,8 +15,8 @@ from torch.optim.lr_scheduler import CosineAnnealingWarmRestarts
 import torch.nn.functional as F
 from nnModels.CVAE2D_ORIGINAL import CVAE2D_ORIGINAL
 
+from leaspy import Leaspy, AlgorithmSettings
 import torchvision.transforms as transforms
-from dataset.Dataset2D import Dataset2D
 from torch.utils.data import DataLoader
 from dataset.LongitudinalDataset2D import LongitudinalDataset2D, longitudinal_collate_2D
 
@@ -156,7 +156,7 @@ def train(model, data_loader, longitudinal_estimator=None,
 
 
 
-def train_kfold(model_type, k_folds_index_list, longitudinal_estimator=None,
+def train_kfold(model_type, path_best_fold_model, k_folds_index_list,
           longitudinal_estimator_settings=None, nb_epochs=100, lr=0.01, freeze = True,
           device='cuda' if torch.cuda.is_available() else 'cpu', nn_saving_path=None, longitudinal_saving_path=None,
           loss_graph_saving_path=None, previous_best_loss=1e15, spatial_loss=spatial_auto_encoder_loss,
@@ -171,13 +171,17 @@ def train_kfold(model_type, k_folds_index_list, longitudinal_estimator=None,
 
     folds_df_list = [pd.read_csv(f"data_csv/train_folds/starmen_train_set_fold_{i}.csv") for i in k_folds_index_list]
 
+    algo_settings_final_fit = AlgorithmSettings('mcmc_saem', n_iter=30000, seed=45, noise_model="gaussian_diagonal")
+
     for valid_index in range(len(folds_df_list)):
         model = model_type(latent_dimension)
         model.gamma = gamma
         model.beta = beta
-        model.load_state_dict(torch.load(nn_saving_path+f"_fold_{valid_index}", map_location='cpu'))
+        model.load_state_dict(torch.load(path_best_fold_model, map_location='cpu'))
         model.device = device
         model.to(device)
+
+        longitudinal_estimator = Leaspy("linear", noise_model="gaussian_diagonal", source_dimension=latent_dimension - 1)
 
         best_loss = previous_best_loss
         optimizer = optim.Adam(filter(lambda p: p.requires_grad, model.parameters()))
@@ -208,12 +212,11 @@ def train_kfold(model_type, k_folds_index_list, longitudinal_estimator=None,
             ### Fit the longitudinal mixed effect model
             predicted_latent_variables = None
             timepoints_of_projection = None
-            if longitudinal_estimator is not None:
-                longitudinal_estimator, encodings_df = fit_longitudinal_estimator_on_nn(train_data_loader, model, device,
-                                                                                        longitudinal_estimator,
-                                                                                        longitudinal_estimator_settings)
-                timepoints_of_projection, predicted_latent_variables = project_encodings_for_training(encodings_df,
-                                                                                                    longitudinal_estimator)
+            longitudinal_estimator, encodings_df = fit_longitudinal_estimator_on_nn(train_data_loader, model, device,
+                                                                                    longitudinal_estimator,
+                                                                                    longitudinal_estimator_settings)
+            timepoints_of_projection, predicted_latent_variables = project_encodings_for_training(encodings_df,
+                                                                                                longitudinal_estimator)
             
             # Training step
             for data in train_data_loader:
@@ -265,7 +268,7 @@ def train_kfold(model_type, k_folds_index_list, longitudinal_estimator=None,
                 if nn_saving_path is not None or longitudinal_saving_path is not None:
                     print({"\n saving params..... \n"})
                     if nn_saving_path is not None:
-                        torch.save(model.state_dict(), nn_saving_path+f"fold_{valid_index}.pth")
+                        torch.save(model.state_dict(), nn_saving_path+f"_fold_{valid_index}.pth2")
                     if longitudinal_estimator is not None and longitudinal_saving_path is not None:
                         longitudinal_estimator.save(longitudinal_saving_path+f"fold_{valid_index}.json")
             else:
@@ -274,10 +277,16 @@ def train_kfold(model_type, k_folds_index_list, longitudinal_estimator=None,
             if nb_epochs_without_loss_improvement >= 30:
                 break
         print("\n")
-        plt.plot(np.arange(len(best_loss), len(best_loss) + len(best_loss)), best_loss, label="Train loss (LVAE)")
+        plt.plot(np.arange(1, len(losses) + 1), losses, label="Train loss (LVAE)")
         plt.grid(True)
         plt.legend()
         plt.savefig(f"{loss_graph_saving_path}loss_LVAE_fold_{valid_index}.pdf")
         plt.show()
         plt.clf()
+
+        results_estimator, _ = fit_longitudinal_estimator_on_nn(train_data_loader, model, device, longitudinal_estimator,
+                                                                algo_settings_final_fit)
+        results_estimator.save(longitudinal_saving_path + f"_fold_{valid_index}" + ".json2")
+
+
     return best_loss, losses
