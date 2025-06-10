@@ -4,3 +4,4 @@ data_starmen/anomaly_images/*.npy
 plots_storage
 *.sh
 *.zip
+log/
