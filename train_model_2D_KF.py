@@ -137,9 +137,9 @@ best_loss, lvae_losses = train_kfold(CVAE2D_ORIGINAL, path_best_fold_model, fold
                                      loss_graph_saving_path=f"{output_path}/loss_longitudinal_only", previous_best_loss=best_loss,
                                      spatial_loss=loss_function, batch_size=batch_size, num_workers=num_worker)
 
-best_fold_LVAE = CV_LVAE(CVAE2D_ORIGINAL, folds_index, test_df, nn_saving_path, longitudinal_saving_path,)
+# best_fold_LVAE = CV_LVAE(CVAE2D_ORIGINAL, folds_index, test_df, nn_saving_path, longitudinal_saving_path)
 
-print("Best VAE fold =", best_fold)
-print("Using this VAE fold, best LVAE fold =", best_fold_LVAE)
+# print("Best VAE fold =", best_fold)
+# print("Using this VAE fold, best LVAE fold =", best_fold_LVAE)
 
 

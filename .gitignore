@@ -2,6 +2,8 @@ data_starmen/images/*.npy
 __pycache__/
 data_starmen/anomaly_images/*.npy
 plots_storage
-*.sh
+script/*.sh
 *.zip
 log/
+saved_models_2D/dataset_acc/freeze_conv/folds/*
+saved_models_2D/dataset_acc/*/folds/*

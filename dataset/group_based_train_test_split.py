@@ -19,8 +19,11 @@ def group_based_train_test_split(df, test_size=0.2, group_col='subject_id', rand
 
     return train_df, test_df
 
-# Usage example
-# train_df, test_df = group_based_train_test_split(df, test_size=0.2, group_col='subject_id', random_state=42)
+if __name__ == "__main__":
+    dataset_df = pd.read_csv("data_csv/starmen_dataset.csv")
+    train_df, test_df = group_based_train_test_split(dataset_df, test_size=0.2, group_col='subject_id', random_state=42)
+    train_df.to_csv('data_csv/starmen_train_set.csv', index=False)
+    test_df.to_csv('data_csv/starmen_test_set.csv', index=False)
 
 # To check the result
 # print(f"Original df shape: {df.shape}")

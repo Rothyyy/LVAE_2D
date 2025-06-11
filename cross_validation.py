@@ -15,13 +15,41 @@ from dataset.Dataset2D import Dataset2D
 from dataset.LongitudinalDataset2D import LongitudinalDataset2D, longitudinal_collate_2D
 from longitudinalModel.fit_longitudinal_estimator_on_nn import fit_longitudinal_estimator_on_nn
 from longitudinalModel.project_encodings_for_training import project_encodings_for_training
+from utils_display.project_encodings_for_results import project_encodings_for_results
 
 
+def get_longitudinal_images(data, model, fitted_longitudinal_estimator, 
+                            device="cuda" if torch.cuda.is_available() else "cpu"):
+    encodings = []
+    times = []
+    ids = []
+    subject_id = data[2][0]
+
+    encoder_output = model.encoder(data[0].float().to(device))
+    logvars = encoder_output[1].detach().clone().to(device)
+    encodings.append(encoder_output[0].detach().clone().to(device))
+    for i in range(len(data[1])):
+        times.extend(data[1][i])
+        ids.extend([data[2][i]] * len(data[1][i]))
+    encodings = torch.cat(encodings)
+    encodings_df = pd.DataFrame({'ID': ids, 'TIME': times})
+    for i in range(encodings.shape[1]):
+        encodings_df.insert(len(encodings_df.columns), f"ENCODING{i}",
+                            encodings[:, i].detach().clone().tolist())
+    encodings_df['ID'] = encodings_df['ID'].astype(str)
+    projection_timepoints = {str(subject_id): data[1][0]}
+    predicted_latent_variables, _ = project_encodings_for_results(encodings_df, str(subject_id),
+                                                                                fitted_longitudinal_estimator,
+                                                                                projection_timepoints)
+    projected_images = model.decoder(torch.tensor(predicted_latent_variables[str(subject_id)]).to(device))
+    # return encodings, logvars, projected_images
+    
+    return torch.from_numpy(predicted_latent_variables[str(subject_id)]), logvars, projected_images
 
 
 def CV_VAE(model_type, fold_index_list, test_set, nn_saving_path,
            device='cuda' if torch.cuda.is_available() else 'cpu',
-           latent_dimension=4, gamma=100, beta=5,
+           latent_dimension=4, gamma=100, beta=5, freeze="no_freeze",
            batch_size=256, num_worker=round(os.cpu_count()/4)):
 
     best_fold = 0
@@ -59,26 +87,26 @@ def CV_VAE(model_type, fold_index_list, test_set, nn_saving_path,
             best_fold = fold_index
 
     plt.plot(fold_index_list, folds_test_loss)
-    plt.savefig("CV_VAE_results.pdf")
+    plt.savefig(f"training_plots/dataset_{dataset_name}/{freeze}/folds/CVAE2D_{temp_args.dimension}_{temp_args.beta}_{temp_args.gamma}_{temp_args.iterations}/CV_VAE_{freeze}_results.pdf")
     plt.clf()
 
     return best_fold
 
-def CV_LVAE(model_type, fold_index_list, test_set, nn_saving_path, longitudinal_saving_path, longitudinal_estimator_settings,
-           device='cuda' if torch.cuda.is_available() else 'cpu',
+def CV_LVAE(model_type, fold_index_list, test_set, nn_saving_path, longitudinal_saving_path,
+           device='cuda' if torch.cuda.is_available() else 'cpu', freeze="no_freeze",
            latent_dimension=4, gamma=100, beta=5,
-           batch_size=256, num_worker=round(os.cpu_count()/4)):
-    #TODO: UNFINISHED
+           num_worker=round(os.cpu_count()/4)):
+
     dataset = LongitudinalDataset2D(test_set)
-    test_data_loader = DataLoader(dataset, batch_size=batch_size, num_workers=num_worker, shuffle=True, pin_memory=True, collate_fn=longitudinal_collate_2D)
+    test_data_loader = DataLoader(dataset, batch_size=1, num_workers=num_worker, shuffle=True, pin_memory=True, collate_fn=longitudinal_collate_2D)
     best_fold = 0
     best_loss = torch.inf
     folds_test_loss = np.zeros(len(fold_index_list))
 
     for fold_index in range(len(fold_index_list)):
         model = model_type(latent_dimension)
-        model.gamma=gamma
-        model.beta=beta
+        model.gamma = gamma
+        model.beta = beta
         model.load_state_dict(torch.load(nn_saving_path+f"_fold_{fold_index}.pth2", map_location='cpu'))
 
         model.device = device
@@ -88,31 +116,25 @@ def CV_LVAE(model_type, fold_index_list, test_set, nn_saving_path, longitudinal_
 
         longitudinal_estimator = Leaspy.load(longitudinal_saving_path+f"_fold_{fold_index}.json2")
         losses = [] 
-        longitudinal_estimator, encodings_df = fit_longitudinal_estimator_on_nn(test_data_loader, model, device,
-                                                                                longitudinal_estimator,
-                                                                                longitudinal_estimator_settings)
-        timepoints_of_projection, predicted_latent_variables = project_encodings_for_training(encodings_df,
-                                                                                            longitudinal_estimator)
+
         for data in test_data_loader:
             x = data[0].to(device).float()
-            mu, logVar, reconstructed, encoded = model(x)
-            reconstruction_loss, kl_loss = spatial_auto_encoder_loss(mu, logVar, reconstructed, x)
-            
-            loss = reconstruction_loss + model.beta * kl_loss
-            if longitudinal_estimator is not None:
-                alignment_loss = longitudinal_loss(mu, torch.cat(([
-                    torch.tensor(predicted_latent_variables[str(subject_id)]).float().to(device) for subject_id in
-                    data[2]])))
-                loss += model.gamma * alignment_loss
-                total_alignment_loss += alignment_loss.item()
+            mus, logvars, recon_x = get_longitudinal_images(data, model, longitudinal_estimator)
+            reconstruction_loss, kl_loss = spatial_auto_encoder_loss(mus, logvars, recon_x, x)
 
-            losses.append(loss.item())
-            total_recon_loss += reconstruction_loss.item()
-            total_kl_loss += kl_loss.item()
+            loss = reconstruction_loss + model.beta * kl_loss       # Add alignment loss for longitudinal aspect ?     
+            losses.append(loss)
 
         test_mean_loss = sum(losses) / len(losses)
         folds_test_loss[fold_index] = test_mean_loss.detach().to("cpu")
 
+        if test_mean_loss < best_loss:
+            best_loss = test_mean_loss
+            best_fold = fold_index
+
+    plt.plot(fold_index_list, folds_test_loss)
+    plt.savefig(f"training_plots/dataset_{dataset_name}/{freeze}/folds/CVAE2D_{temp_args.dimension}_{temp_args.beta}_{temp_args.gamma}_{temp_args.iterations}/CV_LVAE_{freeze}results.pdf")
+    plt.clf()
 
     return best_fold
 
@@ -140,27 +162,51 @@ if __name__ == "__main__":
                         default=f'saved_models_2D/dataset_{temp_args.dataset}/{freeze_path}/folds/CVAE2D_{temp_args.dimension}_{temp_args.beta}_{temp_args.gamma}_{temp_args.iterations}',
                         help='path where the neural network model parameters are saved')
     parser.add_argument('--longitudinal_estimator_path', type=str, required=False,
-                        default=f'saved_models_2D/dataset_{temp_args.dataset}/{freeze_path}/folds/longitudinal_estimator_params_CVAE2D__{temp_args.dimension}_{temp_args.beta}_{temp_args.gamma}_{temp_args.iterations}',
+                        default=f'saved_models_2D/dataset_{temp_args.dataset}/{freeze_path}/folds/longitudinal_estimator_params_CVAE2D_{temp_args.dimension}_{temp_args.beta}_{temp_args.gamma}_{temp_args.iterations}',
                         help='path where the longitudinal estimator parameters are saved')
     args = parser.parse_args()
 
     test_set_path = "./data_csv/starmen_test_set.csv"
     test_set = pd.read_csv(test_set_path)
     nn_saving_path = args.nnmodel_path
+    dataset_name = args.dataset
+    longitudinal_saving_path = args.longitudinal_estimator_path
     batch_size = args.batch_size
     latent_representation_size = args.dimension
     gamma = args.gamma
     beta = args.beta
 
+    save_best_fold_path_VAE = f"saved_models_2D/dataset_{dataset_name}/{freeze_path}/best_{freeze_path}_fold_CVAE2D_{temp_args.dimension}_{temp_args.beta}_{temp_args.gamma}_{temp_args.iterations}.pth"
+    save_best_fold_path_LVAE = f"saved_models_2D/dataset_{dataset_name}/{freeze_path}/best_{freeze_path}_fold_longitudinal_estimator_params_CVAE2D_{temp_args.dimension}_{temp_args.beta}_{temp_args.gamma}_{temp_args.iterations}.json"
 
 
+    # Saving the best VAE model in the right folder
     best_fold = CV_VAE(CVAE2D_ORIGINAL, [i for i in range(8)], test_set, nn_saving_path,
                         latent_dimension=latent_representation_size, gamma=gamma, beta=beta, batch_size=batch_size)
-
     print("Best VAE fold =", best_fold)
+    
+    best_fold_model = CVAE2D_ORIGINAL(latent_representation_size)
+    best_fold_model.gamma = gamma
+    best_fold_model.beta = beta
+    best_fold_model.load_state_dict(torch.load(nn_saving_path+f"_fold_{best_fold}.pth", map_location='cpu'))
+    torch.save(best_fold_model.state_dict(), save_best_fold_path_VAE)
 
-    best_fold = CV_LVAE(CVAE2D_ORIGINAL, [i for i in range(8)], test_set, nn_saving_path)
 
+
+    # Saving the best LVAE model in the right folder
+    best_fold = CV_LVAE(CVAE2D_ORIGINAL, [i for i in range(8)], test_set, nn_saving_path, longitudinal_saving_path,
+                        latent_dimension=latent_representation_size, gamma=gamma, beta=beta)
     print("Best LVAE fold =", best_fold)
+
+    best_fold_model = CVAE2D_ORIGINAL(latent_representation_size)
+    best_fold_model.gamma = gamma
+    best_fold_model.beta = beta
+    best_fold_model.load_state_dict(torch.load(nn_saving_path+f"_fold_{best_fold}.pth2", map_location='cpu'))
+    torch.save(best_fold_model.state_dict(), save_best_fold_path_VAE+"2")
+    longitudinal_estimator = Leaspy.load(longitudinal_saving_path+f"_fold_{best_fold}.json2")
+    longitudinal_estimator.save(save_best_fold_path_LVAE+"2")
+
+
+
 
     
