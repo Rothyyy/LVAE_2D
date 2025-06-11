@@ -57,8 +57,8 @@ def plot_anomaly(original_image, reconstructed_image_VAE, reconstructed_image_LV
     We enter this function when an anomaly is detected.
     The function will plot the image and save it in a pdf file.
     """
-    os.makedirs(f"anomaly/figure_reconstruction/{anomaly_type}/{method}", exist_ok=True)
-    save_path = f"anomaly/figure_reconstruction/{anomaly_type}/{method}/AD_subject_{id}"
+    os.makedirs(f"anomaly/figure_reconstruction/dataset_{args.dataset}/{anomaly_type}/{freeze_path}/{method}", exist_ok=True)
+    save_path = f"anomaly/figure_reconstruction/dataset_{args.dataset}/{anomaly_type}/{freeze_path}/{method}/AD_subject_{id}.pdf"
 
     # Compute the residual and binary mask
     if method == "image":
@@ -118,8 +118,7 @@ def plot_anomaly(original_image, reconstructed_image_VAE, reconstructed_image_LV
 
     f.suptitle(f'Individual id = {id}, method = {method}, (model = True => Anomaly detected, else False)', fontsize=80)
     plt.tight_layout()
-    os.makedirs(os.path.dirname(save_path), exist_ok=True)
-    plt.savefig(save_path+".pdf")
+    plt.savefig(save_path)
     plt.close(f)
     return 
 
@@ -129,8 +128,8 @@ def plot_anomaly_bar(array_anomaly_detected, model_name, anomaly_type, method, n
     This function will plot bars corresponding to the number of time the model detect
     an anomaly for the i-th image of a subject.
     """
-    save_path = f"anomaly/figure_reconstruction/bar_plots/{anomaly_type}/{model_name}_{method}_{anomaly_type}_bar_plot"
-    os.makedirs(f"anomaly/figure_reconstruction/bar_plots/{anomaly_type}", exist_ok=True)
+    save_path = f"anomaly/figure_reconstruction/bar_plots/dataset_{args.dataset}/{anomaly_type}/{freeze_path}/{model_name}_{method}_{anomaly_type}_bar_plot.pdf"
+    os.makedirs(f"anomaly/figure_reconstruction/bar_plots/dataset_{args.dataset}/{anomaly_type}/{freeze_path}", exist_ok=True)
     x = np.array([i for i in range(1, 11)])
     color = "tab:blue" if model_name=="VAE" else "tab:orange"
 
@@ -143,7 +142,7 @@ def plot_anomaly_bar(array_anomaly_detected, model_name, anomaly_type, method, n
     ax.set_ylim(0, int(num_images/10)+1)
     plt.tight_layout()
 
-    plt.savefig(save_path+".pdf")
+    plt.savefig(save_path)
     plt.close(fig)
     return 
 
@@ -183,6 +182,7 @@ if __name__=="__main__":
                         help='freeze convolution layer ? default = y')
     parser.add_argument('--dataset', type=str, required=False, default="noacc",
                         help='Use the models trained on dataset "acc" or "noacc"')
+    parser.add_argument("-kf", type=str, required=False, default="y")
     args = parser.parse_args()
     freeze_path = "freeze_conv" if args.freeze == 'y' else "no_freeze"
 
@@ -228,20 +228,29 @@ if __name__=="__main__":
 
     # Loading VAE model
     model_VAE = CVAE2D_ORIGINAL(latent_dimension)
-    model_VAE_path = f"saved_models_2D/dataset_{args.dataset}/{freeze_path}/CVAE2D_4_{beta}_100_200.pth"
+    if args.kf == "y":
+        model_VAE_path = f"saved_models_2D/dataset_{args.dataset}/{freeze_path}/best_{freeze_path}_fold_CVAE2D_4_{beta}_100_200.pth"
+    else: 
+        model_VAE_path = f"saved_models_2D/dataset_{args.dataset}/{freeze_path}/CVAE2D_4_{beta}_100_200.pth"
     model_VAE.load_state_dict(torch.load(model_VAE_path, map_location='cpu'))
     model_VAE = model_VAE.to(device)
+    model_VAE.eval()
     model_VAE.training = False
 
 
     # Loading LVAE model
     model_LVAE = CVAE2D_ORIGINAL(latent_dimension)
-    model_LVAE_path = f"saved_models_2D/dataset_{args.dataset}/{freeze_path}/CVAE2D_4_{beta}_100_200.pth2"
+    if args.kf == "y":
+        model_LVAE_path = f"saved_models_2D/dataset_{args.dataset}/{freeze_path}/best_{freeze_path}_fold_CVAE2D_4_{beta}_100_200.pth2"
+        longitudinal_saving_path = f"saved_models_2D/dataset_{args.dataset}/{freeze_path}/best_{freeze_path}_fold_longitudinal_estimator_params_CVAE2D_4_{beta}_100_200.json2"
+    else: 
+        model_LVAE_path = f"saved_models_2D/dataset_{args.dataset}/{freeze_path}/CVAE2D_4_{beta}_100_200.pth2"
+        longitudinal_saving_path = f"saved_models_2D/dataset_{args.dataset}/{freeze_path}/longitudinal_estimator_params_CVAE2D_4_{beta}_100_200.json2"
+
     model_LVAE.load_state_dict(torch.load(model_LVAE_path, map_location='cpu'))
     model_LVAE = model_LVAE.to(device)
+    model_LVAE.eval()
     model_LVAE.training = False
-
-    longitudinal_saving_path = f"saved_models_2D/dataset_{args.dataset}/{freeze_path}/longitudinal_estimator_params_CVAE2D_4_{beta}_100_200.json2"
     longitudinal_estimator = Leaspy.load(longitudinal_saving_path)
 
     # Loading thresholds and dataset

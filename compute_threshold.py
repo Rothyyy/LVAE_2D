@@ -91,7 +91,7 @@ def compute_stats(all_losses, model, method):
 
 
 def plot_recon_error_histogram(recon_error_list, model_name, method):
-    save_path = f"anomaly/figure_reconstruction/recon_error/{model_name}_{freeze_path}_{method}_{data_choice}"
+    save_path = f"anomaly/figure_reconstruction/recon_error/{model_name}_{freeze_path}_{method}_{dataset_name}"
     color = "tab:blue" if model_name=="VAE" else "tab:orange"
 
     if len(recon_error_list.shape) > 1:
@@ -128,15 +128,15 @@ def plot_recon_error_histogram(recon_error_list, model_name, method):
     ax.set_xlabel('Reconstruction error range')
     ax.set_ylabel('Count')
     if method == "image":
-        ax.set_title(f'Reconstruction errors when considering {method} with {model_name} ({data_choice})')
-        if data_choice == "train":
+        ax.set_title(f'Reconstruction errors when considering {method} with {model_name} ({dataset_name})')
+        if set_choice == "train":
             ax.set_ylim(0, 5000)  # Set the y-axis range to fit your expected scale
         else:
             ax.set_ylim(0, 1500)
 
     elif method == "pixel":
-        ax.set_title(f'Pixel differences with {model_name} ({data_choice})')
-        if data_choice == "train":
+        ax.set_title(f'Pixel differences with {model_name} ({dataset_name})')
+        if set_choice == "train":
             ax.set_ylim(0, 2.5e7)
         else:
             ax.set_ylim(0, 1e7)
@@ -152,12 +152,14 @@ def plot_recon_error_histogram(recon_error_list, model_name, method):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("-m", "--method", type=str, required=False, default="pixel")
-    parser.add_argument("-d", "--dataset", type=str, required=False, default="test")
+    parser.add_argument("-set", type=str, required=False, default="test")
     parser.add_argument("--beta", type=float, required=False, default=5)
+    parser.add_argument("--gamma", type=float, required=False, default=100)
     parser.add_argument('-f', '--freeze', type=str, required=False, default='y',
                         help='freeze convolution layer ? default = y')
-    parser.add_argument('--dataset', type=str, required=False, default="noacc",
+    parser.add_argument('--dataset', type=str, required=True, default="noacc",
                         help='Use the models trained on dataset "acc" or "noacc"')
+    parser.add_argument("-kf", type=str, required=True, default="y")
     args = parser.parse_args()
     freeze_path = "freeze_conv" if args.freeze == 'y' else "no_freeze"
 
@@ -170,7 +172,9 @@ if __name__ == "__main__":
         print("Error in the input_loss, select one among the following : ['image', 'pixel', 'pixel_all]")
         exit()
     beta = args.beta
-    data_choice = args.dataset
+    gamma = args.gamma
+    set_choice = args.set
+    dataset_name = args.dataset
     stats_dict = {}
 
     # Setting some parameters
@@ -178,8 +182,14 @@ if __name__ == "__main__":
     num_worker = round(os.cpu_count()/6)
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
-    nn_saving_path = f"saved_models_2D/dataset_{args.dataset}/{freeze_path}/CVAE2D_4_{beta}_100_200.pth"
-    longitudinal_saving_path = f"saved_models_2D/dataset_{args.dataset}/{freeze_path}/longitudinal_estimator_params_CVAE2D_4_{beta}_100_200.json"
+    if args.kf == "y":
+        nn_saving_path = f"saved_models_2D/dataset_{dataset_name}/{freeze_path}/best_{freeze_path}_fold_CVAE2D_4_{beta}_{gamma}_200.pth"
+        longitudinal_saving_path = f"saved_models_2D/dataset_{dataset_name}/{freeze_path}/best_{freeze_path}_fold_longitudinal_estimator_params_CVAE2D_4_{beta}_{gamma}_200.json"
+    else:
+        nn_saving_path = f"saved_models_2D/dataset_{dataset_name}/{freeze_path}/CVAE2D_4_{beta}_100_200.pth"
+        longitudinal_saving_path = f"saved_models_2D/dataset_{dataset_name}/{freeze_path}/longitudinal_estimator_params_CVAE2D_4_{beta}_{gamma}_200.json"
+
+
 
     ##### LAUNCHING COMPUTATION FOR VAE #####
 
@@ -189,7 +199,7 @@ if __name__ == "__main__":
     model.to(device)
     model.training = False
 
-    if data_choice == "train":
+    if set_choice == "train":
         dataset = Dataset2D("data_csv/starmen_train_set.csv", read_image=open_npy,transform=transformations)
     else:
         dataset = Dataset2D("data_csv/starmen_test_set.csv", read_image=open_npy,transform=transformations)
@@ -223,7 +233,7 @@ if __name__ == "__main__":
     model.training = False
     longitudinal_estimator = Leaspy.load(longitudinal_saving_path + "2")
 
-    if data_choice == "train":
+    if set_choice == "train":
         dataset = LongitudinalDataset2D("data_csv/starmen_train_set.csv", read_image=open_npy, transform=transformations)
     else:
         dataset = LongitudinalDataset2D("data_csv/starmen_test_set.csv", read_image=open_npy, transform=transformations)

@@ -8,9 +8,11 @@ import pandas as pd
 # Drawing circles on some specific part of the image (left part of the starman, center of the starman)
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("-n", "--n_sample", type=int, required=False, default=10)
+    parser.add_argument("-n", "--n_sample", type=int, required=False, default=5)
     parser.add_argument("-a", "--anomaly", type=str, required=False, default="darker_circle")
     parser.add_argument("--csv", type=bool, required=False, default=True)
+    parser.add_argument("-set", type=str, required=False, default="test",
+                        help="choose which set ('train', 'test', 'all') to consider when generating anomalous images.")
     args = parser.parse_args()
 
     anomaly = args.anomaly
@@ -20,7 +22,19 @@ if __name__ == "__main__":
         exit()
 
     n_sample = args.n_sample      # Number of subject to generate an anomaly
-    random_subject = np.random.choice(1000, size=n_sample, replace=False)
+    if args.set == "test":
+        file_csv = pd.read_csv("data_csv/starmen_test_set.csv")
+        id_list = file_csv["subject_id"].unique()
+        random_subject = np.random.choice(id_list, size=n_sample, replace=False)
+    
+    elif args.set == "train":
+        file_csv = pd.read_csv("data_csv/starmen_train_set.csv")
+        id_list = file_csv["subject_id"].unique()
+        random_subject = np.random.choice(id_list, size=n_sample, replace=False)
+
+    else:
+        random_subject = np.random.choice(1000, size=n_sample, replace=False)
+    
     to_csv = args.csv
     data = []
     f = open("data_starmen/path_to_visit_ages_file.txt", "r")
@@ -56,7 +70,7 @@ if __name__ == "__main__":
             if anomaly == "shrinking_circle":
                 cv2.circle(image_uint8, contours[leftmost_position], round(ages[9-t]-ages[0]), (255,255,255), -1)
             if anomaly == "darker_circle":
-                cv2.circle(image_uint8, contours[leftmost_position], 1, 
+                cv2.circle(image_uint8, contours[leftmost_position], 2, 
                            (max(0, 200-20*round(ages[t]-ages[0])),
                             max(0, 200-20*round(ages[t]-ages[0])),
                             max(0, 200-20*round(ages[t]-ages[0]))), -1)
@@ -64,7 +78,7 @@ if __name__ == "__main__":
                 cv2.line(image_uint8, contours[leftmost_position], contours[leftmost_position] + 3,     # TODO: Maybe consider better line position ?
                          ((max(0, 200-20*round(ages[t]-ages[0])),
                            max(0, 200-20*round(ages[t]-ages[0])),
-                           max(0, 200-20*round(ages[t]-ages[0])))), 1)
+                           max(0, 200-20*round(ages[t]-ages[0])))), 2)
 
             # Create the data that will be used for anomaly detection
             if to_csv:
