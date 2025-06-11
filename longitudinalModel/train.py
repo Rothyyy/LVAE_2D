@@ -270,7 +270,7 @@ def train_kfold(model_type, path_best_fold_model, k_folds_index_list,
                     if nn_saving_path is not None:
                         torch.save(model.state_dict(), nn_saving_path+f"_fold_{valid_index}.pth2")
                     if longitudinal_estimator is not None and longitudinal_saving_path is not None:
-                        longitudinal_estimator.save(longitudinal_saving_path+f"fold_{valid_index}.json")
+                        longitudinal_estimator.save(longitudinal_saving_path+f"_fold_{valid_index}.json")
             else:
                 nb_epochs_without_loss_improvement += 1
 
