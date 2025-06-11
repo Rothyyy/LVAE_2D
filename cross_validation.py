@@ -133,7 +133,7 @@ def CV_LVAE(model_type, fold_index_list, test_set, nn_saving_path, longitudinal_
             best_fold = fold_index
 
     plt.plot(fold_index_list, folds_test_loss)
-    plt.savefig(f"training_plots/dataset_{dataset_name}/{freeze}/folds/CVAE2D_{temp_args.dimension}_{temp_args.beta}_{temp_args.gamma}_{temp_args.iterations}/CV_LVAE_{freeze}results.pdf")
+    plt.savefig(f"training_plots/dataset_{dataset_name}/{freeze}/folds/CVAE2D_{temp_args.dimension}_{temp_args.beta}_{temp_args.gamma}_{temp_args.iterations}/CV_LVAE_{freeze}_results.pdf")
     plt.clf()
 
     return best_fold
@@ -182,29 +182,29 @@ if __name__ == "__main__":
 
     # Saving the best VAE model in the right folder
     best_fold = CV_VAE(CVAE2D_ORIGINAL, [i for i in range(8)], test_set, nn_saving_path,
-                        latent_dimension=latent_representation_size, gamma=gamma, beta=beta, batch_size=batch_size)
+                        latent_dimension=latent_representation_size, gamma=gamma, beta=beta, batch_size=batch_size, freeze=freeze_path)
     print("Best VAE fold =", best_fold)
     
     best_fold_model = CVAE2D_ORIGINAL(latent_representation_size)
     best_fold_model.gamma = gamma
     best_fold_model.beta = beta
-    best_fold_model.load_state_dict(torch.load(nn_saving_path+f"_fold_{best_fold}.pth", map_location='cpu'))
-    torch.save(best_fold_model.state_dict(), save_best_fold_path_VAE)
+    # best_fold_model.load_state_dict(torch.load(nn_saving_path+f"_fold_{best_fold}.pth", map_location='cpu'))
+    # torch.save(best_fold_model.state_dict(), save_best_fold_path_VAE)
 
 
 
     # Saving the best LVAE model in the right folder
     best_fold = CV_LVAE(CVAE2D_ORIGINAL, [i for i in range(8)], test_set, nn_saving_path, longitudinal_saving_path,
-                        latent_dimension=latent_representation_size, gamma=gamma, beta=beta)
+                        latent_dimension=latent_representation_size, gamma=gamma, beta=beta, freeze=freeze_path)
     print("Best LVAE fold =", best_fold)
 
     best_fold_model = CVAE2D_ORIGINAL(latent_representation_size)
     best_fold_model.gamma = gamma
     best_fold_model.beta = beta
     best_fold_model.load_state_dict(torch.load(nn_saving_path+f"_fold_{best_fold}.pth2", map_location='cpu'))
-    torch.save(best_fold_model.state_dict(), save_best_fold_path_VAE+"2")
-    longitudinal_estimator = Leaspy.load(longitudinal_saving_path+f"_fold_{best_fold}.json2")
-    longitudinal_estimator.save(save_best_fold_path_LVAE+"2")
+    # torch.save(best_fold_model.state_dict(), save_best_fold_path_VAE+"2")
+    # longitudinal_estimator = Leaspy.load(longitudinal_saving_path+f"_fold_{best_fold}.json2")
+    # longitudinal_estimator.save(save_best_fold_path_LVAE+"2")
 
 
 
