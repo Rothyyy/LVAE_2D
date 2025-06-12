@@ -310,7 +310,7 @@ if __name__=="__main__":
                 # Compute VAE's reconstruction error
                 reconstruction_error_VAE = loss_function(recon_images_VAE[i, 0], images[i, 0], method)
                 
-                compare_to_threshold_95 = reconstruction_error_VAE > VAE_threshold_99   # Here to change with threshold to use
+                compare_to_threshold_95 = reconstruction_error_VAE > VAE_threshold_99   #  !!! Here to change with threshold to use
                 anomaly_detected_vector_VAE[i] += (compare_to_threshold_95).any()
                 total_detection_anomaly_VAE[i] += compare_to_threshold_95
 
@@ -329,8 +329,8 @@ if __name__=="__main__":
                 if method != "image":
                     pixel_errors_LVAE[i] = compare_to_threshold_95 
 
-                LVAE_anomaly_detected_95 += torch.sum(reconstruction_error > LVAE_threshold_95).item()
-                LVAE_anomaly_detected_99 += torch.sum(reconstruction_error > LVAE_anomaly_detected_99).item()
+                LVAE_anomaly_detected_95 += torch.sum(reconstruction_error > VAE_threshold_95).item()
+                LVAE_anomaly_detected_99 += torch.sum(reconstruction_error > VAE_threshold_99).item()
 
             # For a subject, plot the anomalous image, the reconstructed image and the residual
             plot_anomaly(images, recon_images_VAE, recon_images_LVAE,

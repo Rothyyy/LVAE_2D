@@ -56,6 +56,7 @@ parser.add_argument('--nnmodel_path', type=str, required=False,
 parser.add_argument('--longitudinal_estimator_path', type=str, required=False,
                     default=f'saved_models_2D/dataset_{temp_args.dataset}/{freeze_path}/folds/longitudinal_estimator_params_{temp_args.nnmodel_name}_{temp_args.dimension}_{temp_args.beta}_{temp_args.gamma}_{temp_args.iterations}',
                     help='path where the longitudinal estimator parameters are saved')
+parser.add_argument("-skip", type=str, required=False, default="n")
 args = parser.parse_args()
 
 # First we get the different train/validation/test dataset
@@ -98,17 +99,18 @@ def open_npy(path):
     return torch.from_numpy(np.load(path)).float()
 
 
-output_path = f"training_plots/dataset_{temp_args.dataset}/{freeze_path}/folds/{args.nnmodel_name}_{temp_args.dimension}_{temp_args.beta}_{temp_args.gamma}_{args.iterations}/"
+output_path = f"training_plots/dataset_{temp_args.dataset}/VAE_folds/{args.nnmodel_name}_{temp_args.dimension}_{temp_args.beta}_{temp_args.gamma}_{args.iterations}/"
 os.makedirs(os.path.dirname(output_path), exist_ok=True)
 
-os.makedirs(os.path.dirname(nn_saving_path), exist_ok=True)
-
 # Training of the vanilla VAE
-train_AE_kfold(CVAE2D_ORIGINAL, folds_index, nb_epochs=500, device=device,
-               nn_saving_path=nn_saving_path,
-               loss_graph_saving_path=output_path, spatial_loss=loss_function,
-               batch_size=batch_size, num_workers=num_worker,
-               latent_dimension=latent_representation_size, gamma=gamma, beta=beta)
+VAE_saving_path = f"saved_models_2D/dataset_{temp_args.dataset}/VAE_folds/{temp_args.nnmodel_name}_{temp_args.dimension}_{temp_args.beta}_{temp_args.gamma}_{temp_args.iterations}"
+os.makedirs(os.path.dirname(f"saved_models_2D/dataset_{temp_args.dataset}/VAE_folds/"), exist_ok=True)
+if args.skip == "n":
+    train_AE_kfold(CVAE2D_ORIGINAL, folds_index, nb_epochs=500, device=device,
+                nn_saving_path=VAE_saving_path,
+                loss_graph_saving_path=output_path, spatial_loss=loss_function,
+                batch_size=batch_size, num_workers=num_worker,
+                latent_dimension=latent_representation_size, gamma=gamma, beta=beta)
 
 best_fold = CV_VAE(CVAE2D_ORIGINAL, folds_index, test_df, nn_saving_path, 
                    latent_dimension=latent_representation_size, gamma=gamma, beta=beta,
@@ -117,6 +119,9 @@ best_fold = CV_VAE(CVAE2D_ORIGINAL, folds_index, test_df, nn_saving_path,
 
 # Training of the Longitudinal VAE
 path_best_fold_model = nn_saving_path+f"_fold_{best_fold}.pth"
+
+output_path = f"training_plots/dataset_{temp_args.dataset}/{freeze_path}/folds/{args.nnmodel_name}_{temp_args.dimension}_{temp_args.beta}_{temp_args.gamma}_{args.iterations}/"
+os.makedirs(os.path.dirname(output_path), exist_ok=True)
 if args.freeze == "y":
     model.freeze_conv()
 best_loss = 1e15
@@ -129,6 +134,8 @@ data_loader = DataLoader(easy_dataset, batch_size=batch_size, num_workers=num_wo
                          collate_fn=longitudinal_collate_2D)
 validation_data_loader = DataLoader(validation_dataset, batch_size=batch_size, num_workers=num_worker, shuffle=False,
                                     collate_fn=longitudinal_collate_2D)
+
+os.makedirs(os.path.dirname(nn_saving_path), exist_ok=True)
 os.makedirs(os.path.dirname(longitudinal_saving_path), exist_ok=True)
 
 best_loss, lvae_losses = train_kfold(CVAE2D_ORIGINAL, path_best_fold_model, folds_index, algo_settings, 
