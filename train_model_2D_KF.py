@@ -90,7 +90,6 @@ print(f"{args.nnmodel_name}_{beta}_{gamma}_{latent_representation_size}_{args.it
 ### Hyperparameters of the longitudinal estimator
 all_losses = []
 algo_settings = AlgorithmSettings('mcmc_saem', n_iter=args.iterations, seed=45, noise_model="gaussian_diagonal")
-algo_final_fitting_settings = AlgorithmSettings('mcmc_saem', n_iter=10000, seed=45, noise_model="gaussian_diagonal")
 
 # Preparation of the data
 transformations = transforms.Compose([])
@@ -106,47 +105,60 @@ os.makedirs(os.path.dirname(output_path), exist_ok=True)
 VAE_saving_path = f"saved_models_2D/dataset_{temp_args.dataset}/VAE_folds/{temp_args.nnmodel_name}_{temp_args.dimension}_{temp_args.beta}_{temp_args.gamma}_{temp_args.iterations}"
 os.makedirs(os.path.dirname(f"saved_models_2D/dataset_{temp_args.dataset}/VAE_folds/"), exist_ok=True)
 if args.skip == "n":
-    train_AE_kfold(CVAE2D_ORIGINAL, folds_index, nb_epochs=500, device=device,
+    train_AE_kfold(CVAE2D_ORIGINAL, [0,1], nb_epochs=1, device=device,
                 nn_saving_path=VAE_saving_path,
                 loss_graph_saving_path=output_path, spatial_loss=loss_function,
                 batch_size=batch_size, num_workers=num_worker,
                 latent_dimension=latent_representation_size, gamma=gamma, beta=beta)
 
-best_fold = CV_VAE(CVAE2D_ORIGINAL, folds_index, test_df, nn_saving_path, 
+best_fold = CV_VAE(CVAE2D_ORIGINAL, [0,1], test_df, VAE_saving_path, temp_args.dataset, plot_save_path=output_path,
                    latent_dimension=latent_representation_size, gamma=gamma, beta=beta,
                    batch_size=batch_size, num_worker=num_worker)
 
+path_best_fold_model = f"saved_models_2D/dataset_{temp_args.dataset}/best_{freeze_path}_fold_{temp_args.nnmodel_name}_{temp_args.dimension}_{temp_args.beta}_{temp_args.gamma}_{temp_args.iterations}.pth"
+model = CVAE2D_ORIGINAL(latent_representation_size)
+model.gamma = gamma
+model.beta = beta
+model.load_state_dict(torch.load(VAE_saving_path+f"_fold_{best_fold}.pth", map_location='cpu'))
+torch.save(model.state_dict(), path_best_fold_model)
 
 # Training of the Longitudinal VAE
-path_best_fold_model = nn_saving_path+f"_fold_{best_fold}.pth"
-
 output_path = f"training_plots/dataset_{temp_args.dataset}/{freeze_path}/folds/{args.nnmodel_name}_{temp_args.dimension}_{temp_args.beta}_{temp_args.gamma}_{args.iterations}/"
 os.makedirs(os.path.dirname(output_path), exist_ok=True)
+
 if args.freeze == "y":
     model.freeze_conv()
-best_loss = 1e15
-validation_dataset = LongitudinalDataset2D('data_csv/starmen_validation_set.csv', read_image=open_npy,
-                                           transform=transformations)
-easy_dataset = LongitudinalDataset2D('data_csv/starmen_train_set.csv', read_image=open_npy,
-                                     transform=transformations)
 
-data_loader = DataLoader(easy_dataset, batch_size=batch_size, num_workers=num_worker, shuffle=False,
-                         collate_fn=longitudinal_collate_2D)
-validation_data_loader = DataLoader(validation_dataset, batch_size=batch_size, num_workers=num_worker, shuffle=False,
-                                    collate_fn=longitudinal_collate_2D)
+best_loss = 1e15
+
+validation_dataset = LongitudinalDataset2D('data_csv/starmen_validation_set.csv', read_image=open_npy, transform=transformations)
+easy_dataset = LongitudinalDataset2D('data_csv/starmen_train_set.csv', read_image=open_npy, transform=transformations)
+
+data_loader = DataLoader(easy_dataset, batch_size=batch_size, num_workers=num_worker, shuffle=False, collate_fn=longitudinal_collate_2D)
+validation_data_loader = DataLoader(validation_dataset, batch_size=batch_size, num_workers=num_worker, shuffle=False, collate_fn=longitudinal_collate_2D)
 
 os.makedirs(os.path.dirname(nn_saving_path), exist_ok=True)
 os.makedirs(os.path.dirname(longitudinal_saving_path), exist_ok=True)
 
-best_loss, lvae_losses = train_kfold(CVAE2D_ORIGINAL, path_best_fold_model, folds_index, algo_settings, 
-                                     nb_epochs=300, lr=initial_lr,
+best_loss, lvae_losses = train_kfold(CVAE2D_ORIGINAL, path_best_fold_model, [0,1], algo_settings, 
+                                     nb_epochs=1, lr=initial_lr,
                                      nn_saving_path=nn_saving_path, longitudinal_saving_path=longitudinal_saving_path,
                                      loss_graph_saving_path=f"{output_path}/loss_longitudinal_only", previous_best_loss=best_loss,
                                      spatial_loss=loss_function, batch_size=batch_size, num_workers=num_worker)
 
-# best_fold_LVAE = CV_LVAE(CVAE2D_ORIGINAL, folds_index, test_df, nn_saving_path, longitudinal_saving_path)
+best_fold_LVAE = CV_LVAE(CVAE2D_ORIGINAL, folds_index, test_df, nn_saving_path, longitudinal_saving_path, temp_args.dataset, plot_save_path=output_path)
 
-# print("Best VAE fold =", best_fold)
-# print("Using this VAE fold, best LVAE fold =", best_fold_LVAE)
 
+save_best_fold_path_VAE = f"saved_models_2D/dataset_{temp_args.dataset}/{freeze_path}/best_{freeze_path}_fold_CVAE2D_{args.dimension}_{args.beta}_{args.gamma}_{args.iterations}.pth"
+save_best_fold_path_LVAE = f"saved_models_2D/dataset_{temp_args.dataset}/{freeze_path}/best_{freeze_path}_fold_longitudinal_estimator_params_CVAE2D_{args.dimension}_{args.beta}_{args.gamma}_{args.iterations}.json"
+
+best_fold_model = CVAE2D_ORIGINAL(latent_representation_size)
+best_fold_model.gamma = gamma
+best_fold_model.beta = beta
+best_fold_model.load_state_dict(torch.load(nn_saving_path+f"_fold_{best_fold_LVAE}.pth2", map_location='cpu'))
+torch.save(best_fold_model.state_dict(), save_best_fold_path_VAE+"2")
+longitudinal_estimator = Leaspy.load(longitudinal_saving_path+f"_fold_{best_fold}.json2")
+longitudinal_estimator.save(save_best_fold_path_LVAE+"2")
+print("Best VAE fold =", best_fold)
+print("Using this VAE fold, best LVAE fold =", best_fold_LVAE)
 

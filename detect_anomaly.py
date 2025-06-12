@@ -226,12 +226,18 @@ if __name__=="__main__":
     ######## TEST WITH VAE ########
     print("Start anomaly detection")
 
-    # Loading VAE model
-    model_VAE = CVAE2D_ORIGINAL(latent_dimension)
+    # Getting the model's path
     if args.kf == "y":
-        model_VAE_path = f"saved_models_2D/dataset_{args.dataset}/{freeze_path}/best_{freeze_path}_fold_CVAE2D_4_{beta}_100_200.pth"
+        model_VAE_path = f"saved_models_2D/dataset_{args.dataset}/best_{freeze_path}_fold_CVAE2D_4_{beta}_100_200.pth"
+        model_LVAE_path = f"saved_models_2D/dataset_{args.dataset}/{freeze_path}/best_{freeze_path}_fold_CVAE2D_4_{beta}_100_200.pth2"
+        longitudinal_saving_path = f"saved_models_2D/dataset_{args.dataset}/{freeze_path}/best_{freeze_path}_fold_longitudinal_estimator_params_CVAE2D_4_{beta}_100_200.json2"
     else: 
         model_VAE_path = f"saved_models_2D/dataset_{args.dataset}/{freeze_path}/CVAE2D_4_{beta}_100_200.pth"
+        model_LVAE_path = f"saved_models_2D/dataset_{args.dataset}/{freeze_path}/CVAE2D_4_{beta}_100_200.pth2"
+        longitudinal_saving_path = f"saved_models_2D/dataset_{args.dataset}/{freeze_path}/longitudinal_estimator_params_CVAE2D_4_{beta}_100_200.json2"
+    
+    # Loading VAE model
+    model_VAE = CVAE2D_ORIGINAL(latent_dimension)
     model_VAE.load_state_dict(torch.load(model_VAE_path, map_location='cpu'))
     model_VAE = model_VAE.to(device)
     model_VAE.eval()
@@ -240,13 +246,6 @@ if __name__=="__main__":
 
     # Loading LVAE model
     model_LVAE = CVAE2D_ORIGINAL(latent_dimension)
-    if args.kf == "y":
-        model_LVAE_path = f"saved_models_2D/dataset_{args.dataset}/{freeze_path}/best_{freeze_path}_fold_CVAE2D_4_{beta}_100_200.pth2"
-        longitudinal_saving_path = f"saved_models_2D/dataset_{args.dataset}/{freeze_path}/best_{freeze_path}_fold_longitudinal_estimator_params_CVAE2D_4_{beta}_100_200.json2"
-    else: 
-        model_LVAE_path = f"saved_models_2D/dataset_{args.dataset}/{freeze_path}/CVAE2D_4_{beta}_100_200.pth2"
-        longitudinal_saving_path = f"saved_models_2D/dataset_{args.dataset}/{freeze_path}/longitudinal_estimator_params_CVAE2D_4_{beta}_100_200.json2"
-
     model_LVAE.load_state_dict(torch.load(model_LVAE_path, map_location='cpu'))
     model_LVAE = model_LVAE.to(device)
     model_LVAE.eval()

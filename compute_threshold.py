@@ -183,7 +183,8 @@ if __name__ == "__main__":
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
     if args.kf == "y":
-        nn_saving_path = f"saved_models_2D/dataset_{dataset_name}/{freeze_path}/best_{freeze_path}_fold_CVAE2D_4_{beta}_{gamma}_200.pth"
+        VAE_nn_saving_path = f"saved_models_2D/dataset_{dataset_name}/best_{freeze_path}_fold_CVAE2D_4_{beta}_{gamma}_200.pth"
+        LVAE_nn_saving_path = f"saved_models_2D/dataset_{dataset_name}/{freeze_path}/best_{freeze_path}_fold_CVAE2D_4_{beta}_{gamma}_200.pth"
         longitudinal_saving_path = f"saved_models_2D/dataset_{dataset_name}/{freeze_path}/best_{freeze_path}_fold_longitudinal_estimator_params_CVAE2D_4_{beta}_{gamma}_200.json"
     else:
         nn_saving_path = f"saved_models_2D/dataset_{dataset_name}/{freeze_path}/CVAE2D_4_{beta}_100_200.pth"
@@ -195,7 +196,7 @@ if __name__ == "__main__":
 
     # Loading the VAE mode
     model = CVAE2D_ORIGINAL(latent_dimension)
-    model.load_state_dict(torch.load(nn_saving_path, map_location='cpu'))
+    model.load_state_dict(torch.load(VAE_nn_saving_path, map_location='cpu'))
     model.to(device)
     model.training = False
 
@@ -228,7 +229,7 @@ if __name__ == "__main__":
 
     # Loading the longitudinal model
     model = CVAE2D_ORIGINAL(latent_dimension)
-    model.load_state_dict(torch.load(nn_saving_path + "2", map_location='cpu'))
+    model.load_state_dict(torch.load(LVAE_nn_saving_path + "2", map_location='cpu'))
     model.to(device)
     model.training = False
     longitudinal_estimator = Leaspy.load(longitudinal_saving_path + "2")

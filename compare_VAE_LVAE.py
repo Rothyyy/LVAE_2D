@@ -143,7 +143,7 @@ if __name__=="__main__":
     ######## Loading the models ########
 
     if args.kf == "y":
-        model_VAE_path = f"saved_models_2D/dataset_{args.dataset}/{freeze_path}/best_{freeze_path}_fold_CVAE2D_4_{beta}_100_200.pth"
+        model_VAE_path = f"saved_models_2D/dataset_{args.dataset}/best_{freeze_path}_fold_CVAE2D_4_{beta}_100_200.pth"
         model_LVAE_path = f"saved_models_2D/dataset_{args.dataset}/{freeze_path}/best_{freeze_path}_fold_CVAE2D_4_{beta}_100_200.pth2"
         longitudinal_saving_path = f"saved_models_2D/dataset_{args.dataset}/{freeze_path}/best_{freeze_path}_fold_longitudinal_estimator_params_CVAE2D_4_{beta}_100_200.json2"
 

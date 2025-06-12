@@ -43,7 +43,7 @@ if __name__=="__main__":
     longitudinal_iteration = 200
     if k_fold == "n":
         nn_saving_path = f"saved_models_2D/dataset_{dataset}/{freeze_path}/CVAE2D_{latent_representation_size}_{beta}_{gamma}_{longitudinal_iteration}.pth"
-        longitudinal_saving_path = f"saved_models_2D//dataset_{dataset}{freeze_path}/longitudinal_estimator_params_CVAE2D_{latent_representation_size}_{beta}_{gamma}_{longitudinal_iteration}.json"
+        longitudinal_saving_path = f"saved_models_2D/dataset_{dataset}{freeze_path}/longitudinal_estimator_params_CVAE2D_{latent_representation_size}_{beta}_{gamma}_{longitudinal_iteration}.json"
         output_path = f"results_reconstruction/dataset_{dataset}/{freeze_path}/CVAE2D_{latent_representation_size}_{beta}_{gamma}_{longitudinal_iteration}/"
     else:
         nn_saving_path = f"saved_models_2D/dataset_{dataset}/{freeze_path}/folds/CVAE2D_{latent_representation_size}_{beta}_{gamma}_{longitudinal_iteration}_fold_{fold}.pth"
