@@ -181,6 +181,9 @@ def train_kfold(model_type, path_best_fold_model, k_folds_index_list,
         model.device = device
         model.to(device)
 
+        if freeze:
+            model.freeze_conv()
+
         longitudinal_estimator = Leaspy("linear", noise_model="gaussian_diagonal", source_dimension=latent_dimension - 1)
 
         best_loss = previous_best_loss

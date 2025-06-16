@@ -126,8 +126,7 @@ torch.save(model.state_dict(), path_best_fold_model)
 output_path = f"training_plots/dataset_{temp_args.dataset}/{freeze_path}/folds/{args.nnmodel_name}_{temp_args.dimension}_{temp_args.beta}_{temp_args.gamma}_{args.iterations}/"
 os.makedirs(os.path.dirname(output_path), exist_ok=True)
 
-if args.freeze == "y":
-    model.freeze_conv()
+freeze = True if args.freeze == "y" else False
 
 best_loss = 1e15
 
@@ -141,7 +140,7 @@ os.makedirs(os.path.dirname(nn_saving_path), exist_ok=True)
 os.makedirs(os.path.dirname(longitudinal_saving_path), exist_ok=True)
 
 best_loss, lvae_losses = train_kfold(CVAE2D_ORIGINAL, path_best_fold_model, folds_index, algo_settings, 
-                                     nb_epochs=300, lr=initial_lr,
+                                     nb_epochs=300, lr=initial_lr, freeze=freeze,
                                      nn_saving_path=nn_saving_path, longitudinal_saving_path=longitudinal_saving_path,
                                      loss_graph_saving_path=f"{output_path}/loss_longitudinal_only", previous_best_loss=best_loss,
                                      spatial_loss=loss_function, batch_size=batch_size, num_workers=num_worker)
