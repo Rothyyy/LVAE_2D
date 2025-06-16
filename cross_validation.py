@@ -44,7 +44,7 @@ def get_longitudinal_images(data, model, fitted_longitudinal_estimator,
     projected_images = model.decoder(torch.tensor(predicted_latent_variables[str(subject_id)]).to(device))
     # return encodings, logvars, projected_images
     
-    return torch.from_numpy(predicted_latent_variables[str(subject_id)]), logvars, projected_images
+    return torch.from_numpy(predicted_latent_variables[str(subject_id)]).to(device), logvars, projected_images
 
 
 def CV_VAE(model_type, fold_index_list, test_set, nn_saving_path, dataset_name,
@@ -189,15 +189,15 @@ if __name__ == "__main__":
 
 
     # Saving the best VAE model in the right folder
-    best_fold = CV_VAE(CVAE2D_ORIGINAL, [i for i in range(8)], test_set, nn_saving_path, dataset_name,
-                        latent_dimension=latent_representation_size, gamma=gamma, beta=beta, batch_size=batch_size, freeze=freeze_path)
-    print("Best VAE fold =", best_fold)
+    # best_fold = CV_VAE(CVAE2D_ORIGINAL, [i for i in range(8)], test_set, nn_saving_path, dataset_name,
+    #                     latent_dimension=latent_representation_size, gamma=gamma, beta=beta, batch_size=batch_size, freeze=freeze_path)
+    # print("Best VAE fold =", best_fold)
     
-    best_fold_model = CVAE2D_ORIGINAL(latent_representation_size)
-    best_fold_model.gamma = gamma
-    best_fold_model.beta = beta
-    best_fold_model.load_state_dict(torch.load(nn_saving_path+f"_fold_{best_fold}.pth", map_location='cpu'))
-    torch.save(best_fold_model.state_dict(), save_best_fold_path_VAE)
+    # best_fold_model = CVAE2D_ORIGINAL(latent_representation_size)
+    # best_fold_model.gamma = gamma
+    # best_fold_model.beta = beta
+    # best_fold_model.load_state_dict(torch.load(nn_saving_path+f"_fold_{best_fold}.pth", map_location='cpu'))
+    # torch.save(best_fold_model.state_dict(), save_best_fold_path_VAE)
 
 
 
