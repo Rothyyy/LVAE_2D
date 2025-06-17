@@ -160,7 +160,7 @@ if __name__ == "__main__":
                         help='freeze convolution layer ? default = y')
     parser.add_argument('--dataset', type=str, required=True, default="noacc",
                         help='Use the models trained on dataset "acc" or "noacc"')
-    parser.add_argument("-kf", type=str, required=True, default="y")
+    parser.add_argument("-kf", type=str, required=False, default="y")
     args = parser.parse_args()
     freeze_path = "freeze_conv" if args.freeze == 'y' else "no_freeze"
 
@@ -285,8 +285,8 @@ if __name__ == "__main__":
 
     # Saving the stats dictionnary in a json file
     if beta == 5:
-        with open(f'data_csv/anomaly_threshold_{method}_{freeze_path}.json', 'w') as f:
+        with open(f'data_csv/anomaly_threshold_{method}_{freeze_path}_{dataset_name}.json', 'w') as f:
             json.dump(stats_dict, f, ensure_ascii=False)
     else:
-        with open(f'data_csv/anomaly_threshold_{method}_{beta}_{freeze_path}.json', 'w') as f:
+        with open(f'data_csv/anomaly_threshold_{method}_{beta}_{freeze_path}_{dataset_name}.json', 'w') as f:
             json.dump(stats_dict, f, ensure_ascii=False)
