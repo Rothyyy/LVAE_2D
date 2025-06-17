@@ -204,7 +204,6 @@ def train_kfold(model_type, path_best_fold_model, k_folds_index_list,
         valid_data_loader = DataLoader(valid_dataset, batch_size=batch_size, num_workers=num_workers, shuffle=True, pin_memory=True, collate_fn=longitudinal_collate_2D)
         train_data_loader = DataLoader(train_dataset, batch_size=batch_size, num_workers=num_workers, shuffle=True, pin_memory=True, collate_fn=longitudinal_collate_2D)
 
-        valid_index = valid_index + 1 if valid_index < len(k_folds_index_list)-1 else 0
         for epoch in iterator:
             nb_batch = 0
             model.training = True 

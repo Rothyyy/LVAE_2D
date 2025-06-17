@@ -180,7 +180,7 @@ if __name__=="__main__":
     parser.add_argument("--beta", type=float, required=False, default=5)
     parser.add_argument('-f', '--freeze', type=str, required=False, default='y',
                         help='freeze convolution layer ? default = y')
-    parser.add_argument('--dataset', type=str, required=False, default="noacc",
+    parser.add_argument('--dataset', type=str, required=True, default="noacc",
                         help='Use the models trained on dataset "acc" or "noacc"')
     parser.add_argument("-kf", type=str, required=False, default="y")
     args = parser.parse_args()
@@ -215,9 +215,9 @@ if __name__=="__main__":
     # Path to dataset and treshold
     anomaly_dataset_path = f"data_csv/anomaly_{anomaly}_starmen_dataset.csv"
     if beta != 5:
-        threshold_path = f"data_csv/anomaly_threshold_{method}_{beta}_{freeze_path}.json"
+        threshold_path = f"data_csv/anomaly_threshold_{method}_{beta}_{freeze_path}_{args.dataset}.json"
     else:
-        threshold_path = f"data_csv/anomaly_threshold_{method}_{freeze_path}.json"
+        threshold_path = f"data_csv/anomaly_threshold_{method}_{freeze_path}_{args.dataset}.json"
     with open(threshold_path) as json_file:
         threshold_dict = json.load(json_file)
 

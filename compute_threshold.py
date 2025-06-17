@@ -91,7 +91,8 @@ def compute_stats(all_losses, model, method):
 
 
 def plot_recon_error_histogram(recon_error_list, model_name, method):
-    save_path = f"anomaly/figure_reconstruction/recon_error/{model_name}_{freeze_path}_{method}_{dataset_name}"
+    save_path = f"anomaly/figure_reconstruction/recon_error/dataset_{args.dataset}/{model_name}_{freeze_path}_{method}_{dataset_name}.pdf"
+    os.makedirs(f"anomaly/figure_reconstruction/recon_error/dataset_{args.dataset}", exist_ok=True)
     color = "tab:blue" if model_name=="VAE" else "tab:orange"
 
     if len(recon_error_list.shape) > 1:
@@ -143,7 +144,7 @@ def plot_recon_error_histogram(recon_error_list, model_name, method):
 
     # Layout fix
     fig.tight_layout()
-    plt.savefig(save_path+".pdf")
+    plt.savefig(save_path)
     plt.close(fig)
 
     return 
