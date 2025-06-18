@@ -188,10 +188,10 @@ if __name__ == "__main__":
     num_worker = round(os.cpu_count()/6)
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
-    if args.kf == "y":
-        VAE_nn_saving_path = f"saved_models_2D/dataset_{dataset_name}/best_{freeze_path}_fold_CVAE2D_4_{beta}_{gamma}_200.pth"
-        LVAE_nn_saving_path = f"saved_models_2D/dataset_{dataset_name}/{freeze_path}/best_{freeze_path}_fold_CVAE2D_4_{beta}_{gamma}_200.pth"
-        longitudinal_saving_path = f"saved_models_2D/dataset_{dataset_name}/{freeze_path}/best_{freeze_path}_fold_longitudinal_estimator_params_CVAE2D_4_{beta}_{gamma}_200.json"
+    if args.kf == "y" or args.kf == "yy":
+        VAE_nn_saving_path = f"saved_models_2D/dataset_{dataset_name}/best_fold_CVAE2D_4_{beta}_{gamma}_200.pth"
+        LVAE_nn_saving_path = f"saved_models_2D/dataset_{dataset_name}/{freeze_path}/best_{freeze_path}_fold_CVAE2D_4_{beta}_{gamma}_200.pth2"
+        longitudinal_saving_path = f"saved_models_2D/dataset_{dataset_name}/{freeze_path}/best_{freeze_path}_fold_longitudinal_estimator_params_CVAE2D_4_{beta}_{gamma}_200.json2"
     else:
         nn_saving_path = f"saved_models_2D/dataset_{dataset_name}/{freeze_path}/CVAE2D_4_{beta}_100_200.pth"
         longitudinal_saving_path = f"saved_models_2D/dataset_{dataset_name}/{freeze_path}/longitudinal_estimator_params_CVAE2D_4_{beta}_{gamma}_200.json"
@@ -235,10 +235,10 @@ if __name__ == "__main__":
 
     # Loading the longitudinal model
     model = CVAE2D_ORIGINAL(latent_dimension)
-    model.load_state_dict(torch.load(LVAE_nn_saving_path + "2", map_location='cpu'))
+    model.load_state_dict(torch.load(LVAE_nn_saving_path, map_location='cpu'))
     model.to(device)
     model.training = False
-    longitudinal_estimator = Leaspy.load(longitudinal_saving_path + "2")
+    longitudinal_estimator = Leaspy.load(longitudinal_saving_path)
 
     if set_choice == "train":
         dataset = LongitudinalDataset2D("data_csv/starmen_train_set.csv", read_image=open_npy, transform=transformations)

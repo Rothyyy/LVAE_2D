@@ -54,7 +54,7 @@ elif temp_args.freeze == "yy":
     freeze_path = "freeze_all"
 else:
     freeze_path = "no_freeze"
-    
+
 parser.add_argument('--nnmodel_path', type=str, required=False,
                     default=f'saved_models_2D/dataset_{temp_args.dataset}/{freeze_path}/folds/{temp_args.nnmodel_name}_{temp_args.dimension}_{temp_args.beta}_{temp_args.gamma}_{temp_args.iterations}',
                     help='path where the neural network model parameters are saved')
@@ -120,7 +120,7 @@ best_fold = CV_VAE(CVAE2D_ORIGINAL, folds_index, test_df, VAE_saving_path, temp_
                    latent_dimension=latent_representation_size, gamma=gamma, beta=beta,
                    batch_size=batch_size, num_worker=num_worker)
 
-path_best_fold_model = f"saved_models_2D/dataset_{temp_args.dataset}/best_{freeze_path}_fold_{temp_args.nnmodel_name}_{temp_args.dimension}_{temp_args.beta}_{temp_args.gamma}_{temp_args.iterations}.pth"
+path_best_fold_model = f"saved_models_2D/dataset_{temp_args.dataset}/best_fold_{temp_args.nnmodel_name}_{temp_args.dimension}_{temp_args.beta}_{temp_args.gamma}_{temp_args.iterations}.pth"
 model = CVAE2D_ORIGINAL(latent_representation_size)
 model.gamma = gamma
 model.beta = beta

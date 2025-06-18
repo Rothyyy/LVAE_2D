@@ -31,7 +31,12 @@ if __name__=="__main__":
     parser.add_argument("--fold", type=int, required=False, default=2)
     parser.add_argument("--dataset", type=str, required=False, default="noacc")
     args = parser.parse_args()
-    freeze_path = "freeze_conv" if args.freeze == 'y' else "no_freeze"
+    if args.freeze == "y":
+        freeze_path = "freeze_conv"
+    elif args.freeze == "yy":
+        freeze_path = "freeze_all"
+    else:
+        freeze_path = "no_freeze"
 
     # Parameters
     latent_representation_size = args.dimension
@@ -46,8 +51,8 @@ if __name__=="__main__":
         longitudinal_saving_path = f"saved_models_2D/dataset_{dataset}{freeze_path}/longitudinal_estimator_params_CVAE2D_{latent_representation_size}_{beta}_{gamma}_{longitudinal_iteration}.json"
         output_path = f"results_reconstruction/dataset_{dataset}/{freeze_path}/CVAE2D_{latent_representation_size}_{beta}_{gamma}_{longitudinal_iteration}/"
     else:
-        nn_saving_path = f"saved_models_2D/dataset_{dataset}/{freeze_path}/folds/CVAE2D_{latent_representation_size}_{beta}_{gamma}_{longitudinal_iteration}_fold_{fold}.pth"
-        longitudinal_saving_path = f"saved_models_2D/dataset_{dataset}/{freeze_path}/folds/longitudinal_estimator_params_CVAE2D_{latent_representation_size}_{beta}_{gamma}_{longitudinal_iteration}_fold_{fold}.json"
+        nn_saving_path = f"saved_models_2D/dataset_{dataset}/{freeze_path}/best_{freeze_path}_fold_CVAE2D_{latent_representation_size}_{beta}_{gamma}_{longitudinal_iteration}.pth"
+        longitudinal_saving_path = f"saved_models_2D/dataset_{dataset}/{freeze_path}/best_{freeze_path}_fold_longitudinal_estimator_params_CVAE2D_{latent_representation_size}_{beta}_{gamma}_{longitudinal_iteration}_fold_{fold}.json"
         output_path = f"results_reconstruction/dataset_{dataset}/{freeze_path}/CVAE2D_{latent_representation_size}_{beta}_{gamma}_{longitudinal_iteration}/"
 
     # dataset_path = "./data_csv/starmen_dataset.csv"      # Consider the whole dataset
