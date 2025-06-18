@@ -157,7 +157,7 @@ def train(model, data_loader, longitudinal_estimator=None,
 
 
 def train_kfold(model_type, path_best_fold_model, k_folds_index_list,
-          longitudinal_estimator_settings=None, nb_epochs=100, lr=0.01, freeze = True,
+          longitudinal_estimator_settings=None, nb_epochs=100, lr=0.01, freeze = "freeze_conv",
           device='cuda' if torch.cuda.is_available() else 'cpu', nn_saving_path=None, longitudinal_saving_path=None,
           loss_graph_saving_path=None, previous_best_loss=1e15, spatial_loss=spatial_auto_encoder_loss,
           batch_size=256, num_workers=round(os.cpu_count()/4),
@@ -181,8 +181,10 @@ def train_kfold(model_type, path_best_fold_model, k_folds_index_list,
         model.device = device
         model.to(device)
 
-        if freeze:
+        if freeze == "freeze_conv":
             model.freeze_conv()
+        if freeze == "freeze_all":
+            model.freeze_all()
 
         longitudinal_estimator = Leaspy("linear", noise_model="gaussian_diagonal", source_dimension=latent_dimension - 1)
 

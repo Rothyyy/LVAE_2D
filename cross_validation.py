@@ -164,7 +164,12 @@ if __name__ == "__main__":
                         help='Use the models trained on dataset "acc" or "noacc"')
     temp_args, _ = parser.parse_known_args()
 
-    freeze_path = "freeze_conv" if temp_args.freeze == 'y' else "no_freeze"
+    if temp_args.freeze == "y":
+        freeze_path = "freeze_conv"
+    elif temp_args.freeze == "yy":
+        freeze_path = "freeze_all"
+    else:
+        freeze_path = "no_freeze"
 
     parser.add_argument('--nnmodel_path', type=str, required=False,
                         default=f'saved_models_2D/dataset_{temp_args.dataset}/{freeze_path}/folds/CVAE2D_{temp_args.dimension}_{temp_args.beta}_{temp_args.gamma}_{temp_args.iterations}',

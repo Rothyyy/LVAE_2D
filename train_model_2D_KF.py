@@ -48,8 +48,13 @@ parser.add_argument('--dataset', type=str, required=True, default="noacc",
                     help='Use the models trained on dataset "acc" or "noacc"')
 temp_args, _ = parser.parse_known_args()
 
-freeze_path = "freeze_conv" if temp_args.freeze == 'y' else "no_freeze"
-
+if temp_args.freeze == "y":
+    freeze_path = "freeze_conv"
+elif temp_args.freeze == "yy":
+    freeze_path = "freeze_all"
+else:
+    freeze_path = "no_freeze"
+    
 parser.add_argument('--nnmodel_path', type=str, required=False,
                     default=f'saved_models_2D/dataset_{temp_args.dataset}/{freeze_path}/folds/{temp_args.nnmodel_name}_{temp_args.dimension}_{temp_args.beta}_{temp_args.gamma}_{temp_args.iterations}',
                     help='path where the neural network model parameters are saved')
@@ -126,7 +131,12 @@ torch.save(model.state_dict(), path_best_fold_model)
 output_path = f"training_plots/dataset_{temp_args.dataset}/{freeze_path}/folds/{args.nnmodel_name}_{temp_args.dimension}_{temp_args.beta}_{temp_args.gamma}_{args.iterations}/"
 os.makedirs(os.path.dirname(output_path), exist_ok=True)
 
-freeze = True if args.freeze == "y" else False
+if args.freeze == "y":
+    freeze = "freeze_conv"
+elif args.freeze == "yy":
+    freeze = "freeze_all"
+else:
+    freeze = "no_freeze"
 
 best_loss = 1e15
 

@@ -93,6 +93,14 @@ class CVAE2D_ORIGINAL(nn.Module):
         # TODO: freeze bn as well ,
         nnModels_utils.freeze(
             [self.conv1, self.conv2, self.conv3, self.upconv1, self.upconv2, self.upconv3])
+    
+    def freeze_all(self):
+        """
+        Freezes the convolutional layers.
+        """
+        # TODO: freeze bn as well ,
+        nnModels_utils.freeze(
+            [self.conv1, self.conv2, self.conv3, self.upconv1, self.upconv2, self.upconv3, self.bn1, self.bn2, self.bn3, self.bn4, self.bn5])
 
     def unfreeze_conv(self):
         nnModels_utils.unfreeze(

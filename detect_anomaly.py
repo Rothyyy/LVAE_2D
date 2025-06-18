@@ -184,7 +184,12 @@ if __name__=="__main__":
                         help='Use the models trained on dataset "acc" or "noacc"')
     parser.add_argument("-kf", type=str, required=False, default="y")
     args = parser.parse_args()
-    freeze_path = "freeze_conv" if args.freeze == 'y' else "no_freeze"
+    if args.freeze == "y":
+        freeze_path = "freeze_conv"
+    elif args.freeze == "yy":
+        freeze_path = "freeze_all"
+    else:
+        freeze_path = "no_freeze"
 
     anomaly = args.anomaly
     anomaly_list = ["darker_circle", "darker_line", "growing_circle", "shrinking_circle"]
