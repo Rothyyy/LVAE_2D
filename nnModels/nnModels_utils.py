@@ -9,12 +9,14 @@ def get_layers(model: torch.nn.Module):
 
 def freeze(layers_to_freeze):
     for layer in layers_to_freeze:
-        layer.requires_grad = False
+        for param in layer.parameters():
+            param.requires_grad = False
 
 
 def unfreeze(layers_to_freeze):
     for layer in layers_to_freeze:
-        layer.requires_grad = True
+        for param in layer.parameters():
+            param.requires_grad = False
 
 
 def kaiming_init(m):
