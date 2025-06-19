@@ -160,6 +160,7 @@ if __name__ == "__main__":
                         help='batch_size to train the VAE, default = 256')
     parser.add_argument('--iterations', type=int, required=False, default=200,
                     help='Number of iterations when training the longitudinal estimator, default = 200')
+    parser.add_argument('--skip', type=bool, required=False, default=False)
     parser.add_argument('-f', '--freeze', type=str, required=True, default='y',
                         help='freeze convolution layer ? default = y')
     parser.add_argument('--dataset', type=str, required=True, default="noacc",
@@ -201,15 +202,16 @@ if __name__ == "__main__":
 
 
     # Saving the best VAE model in the right folder
-    best_fold = CV_VAE(CVAE2D_ORIGINAL, [i for i in range(8)], test_set, VAE_saving_path, dataset_name,
-                        latent_dimension=latent_representation_size, gamma=gamma, beta=beta, batch_size=batch_size, freeze=freeze_path)
-    print("Best VAE fold =", best_fold)
-    
-    best_fold_model = CVAE2D_ORIGINAL(latent_representation_size)
-    best_fold_model.gamma = gamma
-    best_fold_model.beta = beta
-    best_fold_model.load_state_dict(torch.load(VAE_saving_path+f"_fold_{best_fold}.pth", map_location='cpu'))
-    torch.save(best_fold_model.state_dict(), save_best_fold_path_VAE)
+    if args.skip == False:
+        best_fold = CV_VAE(CVAE2D_ORIGINAL, [i for i in range(8)], test_set, VAE_saving_path, dataset_name,
+                            latent_dimension=latent_representation_size, gamma=gamma, beta=beta, batch_size=batch_size, freeze=freeze_path)
+        print("Best VAE fold =", best_fold)
+        
+        best_fold_model = CVAE2D_ORIGINAL(latent_representation_size)
+        best_fold_model.gamma = gamma
+        best_fold_model.beta = beta
+        best_fold_model.load_state_dict(torch.load(VAE_saving_path+f"_fold_{best_fold}.pth", map_location='cpu'))
+        torch.save(best_fold_model.state_dict(), save_best_fold_path_VAE)
 
 
 

@@ -167,6 +167,6 @@ best_fold_model.gamma = gamma
 best_fold_model.beta = beta
 best_fold_model.load_state_dict(torch.load(nn_saving_path+f"_fold_{best_fold_LVAE}.pth2", map_location='cpu'))
 torch.save(best_fold_model.state_dict(), save_best_fold_path_VAE+"2")
-longitudinal_estimator = Leaspy.load(longitudinal_saving_path+f"_fold_{best_fold}.json2")
+longitudinal_estimator = Leaspy.load(longitudinal_saving_path+f"_fold_{best_fold_LVAE}.json2")
 longitudinal_estimator.save(save_best_fold_path_LVAE+"2")
 
