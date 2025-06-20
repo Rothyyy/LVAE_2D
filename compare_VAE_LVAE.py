@@ -46,8 +46,8 @@ def get_longitudinal_images(data, model, fitted_longitudinal_estimator):
                                                                                 fitted_longitudinal_estimator,
                                                                                 projection_timepoints)
     projected_images = model.decoder(torch.tensor(predicted_latent_variables[str(subject_id)]).to(device))
-    return encodings, logvars, projected_images
-
+    # return encodings, logvars, projected_images
+    return torch.from_numpy(predicted_latent_variables[str(subject_id)]), logvars, projected_images
 
 
 def plot_comparison(original_image, reconstructed_image_VAE, reconstructed_image_LVAE, id, anomaly_type):
