@@ -193,8 +193,9 @@ if __name__ == "__main__":
         LVAE_nn_saving_path = f"saved_models_2D/dataset_{dataset_name}/{freeze_path}/best_{freeze_path}_fold_CVAE2D_4_{beta}_{gamma}_200.pth2"
         longitudinal_saving_path = f"saved_models_2D/dataset_{dataset_name}/{freeze_path}/best_{freeze_path}_fold_longitudinal_estimator_params_CVAE2D_4_{beta}_{gamma}_200.json2"
     else:
-        nn_saving_path = f"saved_models_2D/dataset_{dataset_name}/{freeze_path}/CVAE2D_4_{beta}_100_200.pth"
-        longitudinal_saving_path = f"saved_models_2D/dataset_{dataset_name}/{freeze_path}/longitudinal_estimator_params_CVAE2D_4_{beta}_{gamma}_200.json"
+        VAE_nn_saving_path = f"saved_models_2D/dataset_{dataset_name}/{freeze_path}/CVAE2D_4_{beta}_100_200.pth"
+        LVAE_nn_saving_path = f"saved_models_2D/dataset_{dataset_name}/{freeze_path}/CVAE2D_4_{beta}_100_200.pth2"
+        longitudinal_saving_path = f"saved_models_2D/dataset_{dataset_name}/{freeze_path}/longitudinal_estimator_params_CVAE2D_4_{beta}_{gamma}_200.json2"
 
 
 

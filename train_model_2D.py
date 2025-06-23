@@ -130,7 +130,7 @@ data_loader = DataLoader(easy_dataset, batch_size=batch_size, num_workers=num_wo
 validation_data_loader = DataLoader(validation_dataset, batch_size=batch_size, num_workers=num_worker, shuffle=True,
                                     pin_memory=True, )
 
-all_losses, _ = train_AE(model, data_loader, nb_epochs=500, device=device,
+all_losses, _ = train_AE(model, data_loader, nb_epochs=300, device=device,
                         nn_saving_path=nn_saving_path,
                         loss_graph_saving_path=None, spatial_loss=loss_function,
                         validation_data_loader=validation_data_loader)
