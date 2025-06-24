@@ -214,8 +214,6 @@ def train_kfold(model_type, path_best_fold_model, k_folds_index_list,
             total_recon_loss, total_kl_loss, total_alignment_loss = 0.0, 0.0, 0.0
 
             ### Fit the longitudinal mixed effect model
-            predicted_latent_variables = None
-            timepoints_of_projection = None
             longitudinal_estimator, encodings_df = fit_longitudinal_estimator_on_nn(train_data_loader, model, device,
                                                                                     longitudinal_estimator,
                                                                                     longitudinal_estimator_settings)
