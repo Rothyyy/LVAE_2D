@@ -5,5 +5,3 @@ plots_storage
 script/*.sh
 *.zip
 log/
-saved_models_2D/dataset_acc/freeze_conv/folds/*
-saved_models_2D/dataset_acc/*/folds/*
