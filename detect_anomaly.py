@@ -95,13 +95,7 @@ def plot_anomaly(original_image, reconstructed_image_VAE, reconstructed_image_LV
         axarr[0, i].imshow(original_image[i, 0 , :, :], cmap="gray")
         axarr[1, i].imshow(reconstructed_image_VAE[i, 0, :, :], cmap="gray")
         axarr[2, i].imshow(reconstructed_image_LVAE[i, 0, :, :], cmap="gray")
-
-        if method == "image":
-            axarr[3, i].imshow(binary_overlay[i])
-        elif method == "pixel":
-            axarr[3, i].imshow(binary_overlay[i])
-        else:
-            axarr[3, i].imshow(binary_overlay[i])
+        axarr[3, i].imshow(binary_overlay[i])
 
         axarr[0, i].set_title(f"VAE={detection_vector_VAE[i]}, LVAE={detection_vector_LVAE[i]}", fontsize=50)
     
