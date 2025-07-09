@@ -97,8 +97,11 @@ def plot_anomaly(original_image, reconstructed_image_VAE, reconstructed_image_LV
         axarr[2, i].imshow(reconstructed_image_LVAE[i, 0, :, :], cmap="gray")
         axarr[3, i].imshow(binary_overlay[i])
 
-        axarr[0, i].set_title(f"VAE={detection_vector_VAE[i]}, LVAE={detection_vector_LVAE[i]}", fontsize=50)
-    
+        if method=="image":
+            axarr[0, i].set_title(f"VAE={detection_vector_VAE[i]}, LVAE={detection_vector_LVAE[i]}", fontsize=50)
+        else:
+            axarr[0, i].set_title(f"VAE={int(torch.sum(pixel_anomaly_VAE[i]).item())}, LVAE={int(torch.sum(pixel_anomaly_LVAE[i]).item())}", fontsize=50)
+
     # Row labels
     row_labels = ["Input", "VAE", "LVAE", f"Residual \n input-model"]
     for row in range(4):
@@ -110,7 +113,10 @@ def plot_anomaly(original_image, reconstructed_image_VAE, reconstructed_image_LV
                             va='center',
                             fontsize=60)
 
-    f.suptitle(f'Individual id = {id}, method = {method}, (model = True => Anomaly detected, else False)', fontsize=80)
+    if method=="image":
+        f.suptitle(f'Individual id = {id}, method = {method}, (model = True => Anomaly detected, else False)', fontsize=80)
+    else:
+        f.suptitle(f'Individual id = {id}, method = {method}, (model = x = # anomalous pixel)', fontsize=80)
     plt.tight_layout()
     plt.savefig(save_path)
     plt.close(f)
@@ -291,8 +297,8 @@ if __name__=="__main__":
             images = images.to(device)
             id = data[2][0]
 
-            pixel_errors_VAE = torch.zeros(size_anomaly, dtype=bool) if method != "image" else None
-            pixel_errors_LVAE = torch.zeros(size_anomaly, dtype=bool) if method != "image" else None
+            pixel_errors_VAE = torch.zeros(size_anomaly) if method != "image" else None
+            pixel_errors_LVAE = torch.zeros(size_anomaly) if method != "image" else None
 
             # These vectors of boolean will be used for the plot
             anomaly_detected_vector_VAE = torch.zeros(10, dtype=bool)   
@@ -308,12 +314,12 @@ if __name__=="__main__":
                 # Compute VAE's reconstruction error
                 reconstruction_error_VAE = loss_function(recon_images_VAE[i, 0], images[i, 0], method)
                 
-                compare_to_threshold_95 = reconstruction_error_VAE > VAE_threshold_99   #  !!! Here to change with threshold to use
-                anomaly_detected_vector_VAE[i] += (compare_to_threshold_95).any()
-                total_detection_anomaly_VAE[i] += compare_to_threshold_95
+                compare_to_threshold = reconstruction_error_VAE > VAE_threshold_99   #  !!! Here to change with threshold to use
+                anomaly_detected_vector_VAE[i] += (compare_to_threshold).any()
+                total_detection_anomaly_VAE[i] += compare_to_threshold
 
                 if method != "image":
-                    pixel_errors_VAE[i] = compare_to_threshold_95 
+                    pixel_errors_VAE[i] = compare_to_threshold 
 
                 VAE_anomaly_detected_95 += torch.sum(reconstruction_error_VAE > VAE_threshold_95).item()
                 VAE_anomaly_detected_99 += torch.sum(reconstruction_error_VAE > VAE_threshold_99).item()
@@ -321,14 +327,14 @@ if __name__=="__main__":
                 # Compute LVAE's reconstruction error
                 reconstruction_error = loss_function(recon_images_LVAE[i, 0], images[i, 0], method)
                 
-                compare_to_threshold_95 = reconstruction_error > VAE_threshold_99   # Here to change with threshold to use
-                anomaly_detected_vector_LVAE[i] += (compare_to_threshold_95).any()
-                total_detection_anomaly_LVAE[i] += compare_to_threshold_95
+                compare_to_threshold = reconstruction_error > VAE_threshold_99   # Here to change with threshold to use
+                anomaly_detected_vector_LVAE[i] += (compare_to_threshold).any()
+                total_detection_anomaly_LVAE[i] += compare_to_threshold
                 if method != "image":
-                    pixel_errors_LVAE[i] = compare_to_threshold_95 
+                    pixel_errors_LVAE[i] = compare_to_threshold 
 
-                LVAE_anomaly_detected_95 += torch.sum(reconstruction_error > VAE_threshold_95).item()
-                LVAE_anomaly_detected_99 += torch.sum(reconstruction_error > VAE_threshold_99).item()
+                LVAE_anomaly_detected_95 += torch.sum(reconstruction_error > LVAE_threshold_95).item()
+                LVAE_anomaly_detected_99 += torch.sum(reconstruction_error > LVAE_threshold_99).item()
 
             # For a subject, plot the anomalous image, the reconstructed image and the residual
             plot_anomaly(images, recon_images_VAE, recon_images_LVAE,

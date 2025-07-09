@@ -13,6 +13,16 @@ def train_k_folds_split(df_train, n_split=8) -> list:
 
     return [i for i in range(n_split)]
 
+def train_k_folds_split_patch(df_train, n_split=8) -> list:
+    # Get unique subject IDs
+    kfold = KFold(n_splits=n_split, shuffle=False)
+    folds = list(kfold.split(range(len(df_train))))
+    os.makedirs("data_csv/train_patch_folds", exist_ok=True)
+    for i in range(n_split):
+        df_train.loc[folds[i][1]].to_csv(f"data_csv/train_patch_folds/starmen_patch_train_set_fold_{i}.csv", index=False)
+
+    return [i for i in range(n_split)]
+
 # Usage example
 # train_df, test_df = group_based_train_test_split(df, test_size=0.2, group_col='subject_id', random_state=42)
 

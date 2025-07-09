@@ -86,7 +86,7 @@ def plot_figures(original_image, reconstructed_original_LVAE, anomaly_image, rec
     plt.clf()
     return 
 
-def compute_trajectory_threshold(encodings_array, ages_array, with_ages=True):
+def compute_trajectory_sequence_threshold(encodings_array, ages_array, with_ages=True):
     """
     This functions takes as input the array of all the dataset's encodings and will return
     a dictionnary containing statistics on the trajectory. 
@@ -114,6 +114,37 @@ def compute_trajectory_threshold(encodings_array, ages_array, with_ages=True):
     traj_dict["max_trajectory"] = np.max(trajectory_array, axis=0).tolist()
     traj_dict["min_trajectory"] = np.min(trajectory_array, axis=0).tolist()
     traj_dict["median_trajectory"] = np.median(trajectory_array, axis=0).tolist()
+
+    return traj_dict
+
+def compute_trajectory_threshold(encodings_array, ages_array, with_ages=True):
+    """
+    This functions takes as input the array of all the dataset's encodings and will return
+    a dictionnary containing statistics on the trajectory. 
+
+    Input:
+        encodings_array: a numpy array of shape (num_subject, num_images, encoding_size), usually (200, 10, 4)
+        ages_array: a numpy array containing the timestamp of each images 
+    """
+    num_subject = encodings_array.shape[0]
+    trajectory_array = np.zeros((num_subject, encodings_array.shape[1]-1))
+
+    # Compute difference between consecutive points
+    encodings_diffs = encodings_array[:, :-1, :] - encodings_array[:, 1:, :]
+    ages_diff = ages_array[: , 1:] - ages_array[:, :-1]
+
+    # Compute L1 norm along the last axis
+    if with_ages:
+        trajectory_array = np.linalg.norm(encodings_diffs, ord=1, axis=2)*np.abs(ages_diff)
+    else:
+        trajectory_array = np.linalg.norm(encodings_diffs, ord=1, axis=2)
+
+    traj_dict = {}
+    traj_dict["mean_trajectory"] = np.mean(trajectory_array.flatten())
+    traj_dict["percentile_95_trajectory"] = np.percentile(trajectory_array.flatten(), 95)
+    traj_dict["max_trajectory"] = np.max(trajectory_array.flatten())
+    traj_dict["min_trajectory"] = np.min(trajectory_array.flatten())
+    traj_dict["median_trajectory"] = np.median(trajectory_array.flatten())
 
     return traj_dict
 
@@ -204,7 +235,8 @@ if __name__ == "__main__":
 
         n_subject += 1
 
-    traj_stats = compute_trajectory_threshold(encodings_original_array, ages_to_consider_array, consider_age)
+    # traj_stats = compute_trajectory_threshold(encodings_original_array, ages_to_consider_array, consider_age)
+    traj_stats = compute_trajectory_sequence_threshold(encodings_original_array, ages_to_consider_array, consider_age)
     if consider_age:
         with open(f'data_csv/trajectory_threshold_ages_{freeze_path}_{dataset_name}.json', 'w') as f:
             json.dump(traj_stats, f, ensure_ascii=False)
