@@ -19,6 +19,8 @@ from leaspy import Leaspy, AlgorithmSettings
 import torchvision.transforms as transforms
 from torch.utils.data import DataLoader
 from dataset.LongitudinalDataset2D import LongitudinalDataset2D, longitudinal_collate_2D
+from dataset.LongitudinalDataset2D_patch import LongitudinalDataset2D_patch, longitudinal_collate_2D_patch
+
 
 def is_reconstruction_well_ordered(times, subject_ids, reconstruction_dict):
     for i in range(len(subject_ids)):
@@ -161,16 +163,18 @@ def train_kfold(model_type, path_best_fold_model, k_folds_index_list,
           device='cuda' if torch.cuda.is_available() else 'cpu', nn_saving_path=None, longitudinal_saving_path=None,
           loss_graph_saving_path=None, previous_best_loss=1e15, spatial_loss=spatial_auto_encoder_loss,
           batch_size=256, num_workers=round(os.cpu_count()/4),
-          latent_dimension=4, gamma=100, beta=5):
+          latent_dimension=4, gamma=100, beta=5, train_patch=False):
     """
     Same as above but with KFold
     """
     transformations = transforms.Compose([])
 
     iterator = tqdm(range(nb_epochs), desc="Training", file=sys.stdout)
-
-    folds_df_list = [pd.read_csv(f"data_csv/train_folds/starmen_train_set_fold_{i}.csv") for i in k_folds_index_list]
-
+    if train_patch:
+        folds_df_list = [pd.read_csv(f"data_csv/train_patch_folds/starmen_patch_train_set_fold_{i}.csv") for i in k_folds_index_list]
+    else:
+        folds_df_list = [pd.read_csv(f"data_csv/train_folds/starmen_train_set_fold_{i}.csv") for i in k_folds_index_list]
+    
     algo_settings_final_fit = AlgorithmSettings('mcmc_saem', n_iter=30000, seed=45, noise_model="gaussian_diagonal")
 
     for valid_index in range(len(folds_df_list)):
@@ -198,13 +202,20 @@ def train_kfold(model_type, path_best_fold_model, k_folds_index_list,
         valid_df = folds_df_list[valid_index]
         train_df = pd.concat([ folds_df_list[i] for i in range(len(folds_df_list)) if i != valid_index ], ignore_index=True)
         
-        # Loading them in the Dataset2D class
-        valid_dataset = LongitudinalDataset2D(valid_df, transform=transformations)
-        train_dataset = LongitudinalDataset2D(train_df, transform=transformations)
+        # Loading them in the Dataset2D class and create DataLoader
+        if train_patch:
+            valid_dataset = LongitudinalDataset2D_patch(valid_df, transform=transformations)
+            train_dataset = LongitudinalDataset2D_patch(train_df, transform=transformations)
 
-        # Create the DataLoader
-        valid_data_loader = DataLoader(valid_dataset, batch_size=batch_size, num_workers=num_workers, shuffle=True, pin_memory=True, collate_fn=longitudinal_collate_2D)
-        train_data_loader = DataLoader(train_dataset, batch_size=batch_size, num_workers=num_workers, shuffle=True, pin_memory=True, collate_fn=longitudinal_collate_2D)
+            valid_data_loader = DataLoader(valid_dataset, batch_size=batch_size, num_workers=num_workers, shuffle=True, pin_memory=True, collate_fn=longitudinal_collate_2D_patch)
+            train_data_loader = DataLoader(train_dataset, batch_size=batch_size, num_workers=num_workers, shuffle=True, pin_memory=True, collate_fn=longitudinal_collate_2D_patch)
+
+        else:
+            valid_dataset = LongitudinalDataset2D(valid_df, transform=transformations)
+            train_dataset = LongitudinalDataset2D(train_df, transform=transformations)
+
+            valid_data_loader = DataLoader(valid_dataset, batch_size=batch_size, num_workers=num_workers, shuffle=True, pin_memory=True, collate_fn=longitudinal_collate_2D)
+            train_data_loader = DataLoader(train_dataset, batch_size=batch_size, num_workers=num_workers, shuffle=True, pin_memory=True, collate_fn=longitudinal_collate_2D)
 
         for epoch in iterator:
             nb_batch = 0

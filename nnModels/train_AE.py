@@ -8,7 +8,7 @@ import pandas as pd
 import os
 import sys
 import torchvision.transforms as transforms
-from dataset.Dataset2D import Dataset2D
+from dataset.Dataset2D import Dataset2D, Dataset2D_patch
 from torch.utils.data import DataLoader
 from nnModels.CVAE2D import CVAE2D
 
@@ -88,7 +88,7 @@ def train_AE(model, data_loader, nb_epochs=100, device='cuda' if torch.cuda.is_a
 def train_AE_kfold(model_type, k_folds_index_list, nb_epochs=100, device='cuda' if torch.cuda.is_available() else 'cpu',
              nn_saving_path=None, loss_graph_saving_path=None, spatial_loss=spatial_auto_encoder_loss, 
              batch_size=256, num_workers=round(os.cpu_count()/4), 
-             latent_dimension=4, gamma=100, beta=5):
+             latent_dimension=4, gamma=100, beta=5, train_patch=False, patch_size=15):
     """
     Trains a variational autoencoder. Nothing longitudinal.
     The goal here is because an AE just requires image to train, it's easier to train and used already implemented
@@ -99,8 +99,11 @@ def train_AE_kfold(model_type, k_folds_index_list, nb_epochs=100, device='cuda' 
     :args: nb_epochs: number of epochs for training
     :args: device: device used to do the variational autoencoder training
     """
-
-    folds_df_list = [pd.read_csv(f"data_csv/train_folds/starmen_train_set_fold_{i}.csv") for i in k_folds_index_list]
+    if train_patch:
+        folds_df_list = [pd.read_csv(f"data_csv/train_patch_folds/starmen_patch_train_set_fold_{i}.csv") for i in k_folds_index_list]
+    else:
+        folds_df_list = [pd.read_csv(f"data_csv/train_folds/starmen_train_set_fold_{i}.csv") for i in k_folds_index_list]
+    
     nb_epochs_without_loss_improvement = 0
     valid_index = 0
     transformations = transforms.Compose([])
@@ -110,8 +113,13 @@ def train_AE_kfold(model_type, k_folds_index_list, nb_epochs=100, device='cuda' 
         train_df = pd.concat([ folds_df_list[i] for i in range(len(folds_df_list)) if i != valid_index ], ignore_index=True)
         
         # Loading them in the Dataset2D class
-        valid_dataset = Dataset2D(valid_df, transform=transformations)
-        train_dataset = Dataset2D(train_df, transform=transformations)
+        if train_patch:
+            valid_dataset = Dataset2D_patch(valid_df, transform=transformations)
+            train_dataset = Dataset2D_patch(train_df, transform=transformations)
+
+        else:
+            valid_dataset = Dataset2D(valid_df, transform=transformations)
+            train_dataset = Dataset2D(train_df, transform=transformations)
 
         # Create the DataLoader
         valid_data_loader = DataLoader(valid_dataset, batch_size=batch_size, num_workers=num_workers, shuffle=True, pin_memory=True)
@@ -139,6 +147,8 @@ def train_AE_kfold(model_type, k_folds_index_list, nb_epochs=100, device='cuda' 
             # Training step
             for x in train_data_loader:
                 optimizer.zero_grad()
+                if train_patch:
+                    x = x.reshape(-1, 1, patch_size, patch_size)
                 x = x.to(device)
 
                 mu, logvar, recon_x, _ = model(x)

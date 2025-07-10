@@ -6,7 +6,7 @@ from torch.utils.data import Dataset
 
 
 def open_npy(path):
-    return torch.from_numpy(np.load(path)).float()
+    return torch.tensor(np.load(path)).float()
 
 class LongitudinalDataset2D_patch(Dataset):
     # TODO: add to readme how to format the csv file
@@ -29,61 +29,39 @@ class LongitudinalDataset2D_patch(Dataset):
 
     def __getitem__(self, idx):
         """
-
         returns observations for an individual, the time of observation,the id of the individual
         images.shape = number_of_observations x 1 x Depth x Height x Width
         """
         patient_id = self.list_patient_ids[idx]
         summary_rows = self.summary_dataframe[self.summary_dataframe['subject_id'] == patient_id].sort_values(
             ['subject_id', 'age'])
-        images = [self.read_image(summary_rows.iloc[i]['patch_path']) for i in range(len(summary_rows))]
-        centers = [self.read_image(summary_rows.iloc[i]['center']) for i in range(len(summary_rows))]
-
-        if len(images) == 0:
+        patches = [self.read_image(summary_rows.iloc[i]['patch_path']) for i in range(len(summary_rows))]
+        patches = torch.cat(patches, dim=0)
+        if len(patches) == 0:
             return None, None, None
 
-        if self.transform is None:
-            images = torch.stack(images)
-        if self.transform:
-            # print(patient_id)
-            images = self.transform(torch.stack(images))
-
-        if self.target_transform:
-            label = self.target_transform(summary_rows)
-            return NotImplemented
-
         # TODO: find a better way to code this, so there's no need to read each image 2 times
-        return images, centers, [summary_rows['age'].iloc[i] for i in range(len(summary_rows))], patient_id
+        return patches, [summary_rows['age'].iloc[i] for i in range(len(summary_rows))], patient_id
     
-    def get_images_from_id(self, subject_id):
+    def get_patches_from_id(self, subject_id):
         """
-        returns observations for an individual, the time of observation,the id of the individual
-        images.shape = number_of_observations x 1 x Depth x Height x Width
+        returns patches for an individual, the center of each patch, the time of observation
+        patches.shape = number_of_observations x 1 x Depth x Height x Width
         """
         if subject_id not in self.list_patient_ids:
             print(f"Error subject {subject_id} not in dataset")
-            return None, None, None
+            return None, None, None, None
         summary_rows = self.summary_dataframe[self.summary_dataframe['subject_id'] == subject_id].sort_values(
             ['subject_id', 'age'])
-        images = [self.read_image(summary_rows.iloc[i]['patch_path']) for i in range(len(summary_rows))]
-        centers = [self.read_image(summary_rows.iloc[i]['center']) for i in range(len(summary_rows))]
-
-        if len(images) == 0:
+        patches = [self.read_image(summary_rows.iloc[i]['patch_path']) for i in range(len(summary_rows))]
+        patches = torch.cat(patches, dim=0)
+        if len(patches) == 0:
             return None, None, None
 
-        if self.transform is None:
-            images = torch.stack(images)
-        if self.transform:
-            images = self.transform(torch.stack(images))
-
-        if self.target_transform:
-            label = self.target_transform(summary_rows)
-            return NotImplemented
-
-        return images, centers, [summary_rows['age'].iloc[i] for i in range(len(summary_rows))]
+        return patches, [summary_rows['age'].iloc[i] for i in range(len(summary_rows))]
 
 
-def longitudinal_collate_2D(batch, device='cuda' if torch.cuda.is_available() else 'cpu'):
+def longitudinal_collate_2D_patch(batch, device='cuda' if torch.cuda.is_available() else 'cpu'):
     images = torch.cat([item[0] for item in batch if item[0] is not None], axis=0)
     # TODO: here use reshape instead of unsqueeze so the input size is fixed
     images = images.unsqueeze(1)

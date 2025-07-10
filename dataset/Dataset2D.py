@@ -42,6 +42,36 @@ class Dataset2D(Dataset):
         image = np.load(img_path)
         image = self.transform(image)
         return image
+    
+class Dataset2D_patch(Dataset):
+    """
+    Dataset made to train the autoencoder without the longitudinal component on the synthetic starmen dataset.
+    """
+
+    def __init__(self, summary_file, transform=None, target_transform=None,
+                 read_image=open_npy):      # read_image=lambda x: torch.Tensor(plt.imshow(x))
+        if type(summary_file) == str:
+            self.summary_dataframe = pd.read_csv(summary_file)
+        elif type(summary_file) == pd.core.frame.DataFrame:
+            self.summary_dataframe = summary_file
+        else:
+            print("Error type when loading data, check file name or type")
+            exit()
+        self.transform = transforms.Compose([
+            transforms.ToTensor(),
+            transforms.Lambda(lambda x: x.to(torch.float32))
+        ])
+
+    def __len__(self):
+        return len(self.summary_dataframe)
+
+    def __getitem__(self, idx):
+        summary_rows = self.summary_dataframe.iloc[idx]
+        patch_path = summary_rows['patch_path']
+        patch = np.load(patch_path)
+        # patch = self.transform(patch)
+        patch = torch.tensor(patch).unsqueeze(1).float()
+        return patch
 
 
 if __name__ == "__main__":

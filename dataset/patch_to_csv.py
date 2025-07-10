@@ -44,7 +44,7 @@ def get_patch_centers_for_pixel(pixel_coord, image_shape, patch_size):
     return centers
 
 
-def get_patch_centers(patch_size=9, image_shape=(64,64)):
+def get_patch_centers(patch_size=15, image_shape=(64,64)):
     """
     This function takes the patch size and the image shape and returns all the patch's centers.
     """
@@ -65,11 +65,11 @@ def get_patch_centers(patch_size=9, image_shape=(64,64)):
 
 if __name__=="__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--size", "-s", type=int, required=False, default=9)
+    parser.add_argument("--size", "-s", type=int, required=False, default=15)
     args = parser.parse_args()
 
     patch_size = args.size
-    num_patch = (64 - (patch_size//2 * 2)) * (64 - (patch_size//2 * 2))
+    num_patch = (64 - (patch_size//2 * 2)) * (64 - (patch_size//2 * 2))     # Number of patches per image
     # Open and get all ages
     f = open("data_starmen/path_to_visit_ages_file.txt", "r")
     ages = f.read().split()
@@ -79,23 +79,22 @@ if __name__=="__main__":
     # Process data to get a csv file 
     data = []
     for patient_id in range(1000):  # For every subject
+        print("Patient :", patient_id)
         for t in range(10):     # For every timestamp
             
             # Load image and get all patches
             path_image = f"./data_starmen/images/SimulatedData__Reconstruction__starman__subject_s{patient_id}__tp_{t}.npy"
             image = np.load(path_image) 
-            patches, centers = extract_centered_patches(image,)
-            
+            patches, centers = extract_centered_patches(image, patch_size)
             # Store the information in a row
-            for patch_i in range(patch_size):
-                np.save(f"./data_starmen/images_patch/Starman__subject_s{patient_id}__tp_{t}_{centers[patch_i][0]}_{centers[patch_i][1]}.npy", patches[patch_i])
-                row = {
-                    "subject_id": str(patient_id),
-                    "age": ages[patient_id*10 + t],
-                    "center": centers[patch_i],
-                    "patch_path": f"./data_starmen/images_patch/Starman__subject_s{patient_id}__tp_{t}_{centers[patch_i][0]}_{centers[patch_i][1]}.npy" ,
-                }
-                data.append(row)
+            np.save(f"./data_starmen/images_patch/Starman__subject_s{patient_id}__tp_{t}_patches.npy", patches)
+            row = {
+                "subject_id": str(patient_id),
+                "age": ages[patient_id*10 + t],
+                # "center": centers[patch_i],
+                "patch_path": f"./data_starmen/images_patch/Starman__subject_s{patient_id}__tp_{t}_patches.npy" ,
+            }
+            data.append(row)
 
     data_df = pd.DataFrame(data)
     data_df.to_csv("data_csv/starmen_dataset_patch.csv")

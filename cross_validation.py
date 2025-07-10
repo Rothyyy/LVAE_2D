@@ -11,8 +11,9 @@ import os
 from nnModels.CVAE2D_ORIGINAL import CVAE2D_ORIGINAL
 from nnModels.losses import spatial_auto_encoder_loss, longitudinal_loss
 
-from dataset.Dataset2D import Dataset2D
+from dataset.Dataset2D import Dataset2D, Dataset2D_patch
 from dataset.LongitudinalDataset2D import LongitudinalDataset2D, longitudinal_collate_2D
+from dataset.LongitudinalDataset2D_patch import LongitudinalDataset2D_patch, longitudinal_collate_2D_patch
 from longitudinalModel.fit_longitudinal_estimator_on_nn import fit_longitudinal_estimator_on_nn
 from longitudinalModel.project_encodings_for_training import project_encodings_for_training
 from utils_display.project_encodings_for_results import project_encodings_for_results
@@ -50,12 +51,15 @@ def get_longitudinal_images(data, model, fitted_longitudinal_estimator,
 def CV_VAE(model_type, fold_index_list, test_set, nn_saving_path, dataset_name,
            device='cuda' if torch.cuda.is_available() else 'cpu', plot_save_path=None,
            latent_dimension=4, gamma=100, beta=5, freeze="no_freeze",
-           batch_size=256, num_worker=round(os.cpu_count()/4)):
+           batch_size=256, num_worker=round(os.cpu_count()/4), cv_patch=False):
 
     best_fold = 0
     best_loss = torch.inf
     folds_test_loss = np.zeros(len(fold_index_list))
-    dataset = Dataset2D(test_set)
+    if cv_patch:
+        dataset = Dataset2D_patch(test_set)
+    else:
+        dataset = Dataset2D(test_set)
     data_loader = DataLoader(dataset, batch_size=batch_size, num_workers=num_worker, shuffle=True, pin_memory=True)
 
     for fold_index in range(len(fold_index_list)):
@@ -101,10 +105,14 @@ def CV_VAE(model_type, fold_index_list, test_set, nn_saving_path, dataset_name,
 def CV_LVAE(model_type, fold_index_list, test_set, nn_saving_path, longitudinal_saving_path, dataset_name,
            device='cuda' if torch.cuda.is_available() else 'cpu', freeze="no_freeze", plot_save_path=None,
            latent_dimension=4, gamma=100, beta=5,
-           num_worker=round(os.cpu_count()/4)):
+           num_worker=round(os.cpu_count()/4), cv_patch=False):
 
-    dataset = LongitudinalDataset2D(test_set)
-    test_data_loader = DataLoader(dataset, batch_size=1, num_workers=num_worker, shuffle=True, pin_memory=True, collate_fn=longitudinal_collate_2D)
+    if cv_patch:
+        dataset = LongitudinalDataset2D_patch(test_set)
+        test_data_loader = DataLoader(dataset, batch_size=1, num_workers=num_worker, shuffle=True, pin_memory=True, collate_fn=longitudinal_collate_2D_patch)
+    else:
+        dataset = LongitudinalDataset2D(test_set)
+        test_data_loader = DataLoader(dataset, batch_size=1, num_workers=num_worker, shuffle=True, pin_memory=True, collate_fn=longitudinal_collate_2D)
     best_fold = 0
     best_loss = torch.inf
     folds_test_loss = np.zeros(len(fold_index_list))
