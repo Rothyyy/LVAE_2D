@@ -178,7 +178,7 @@ if __name__=="__main__":
     parser.add_argument("-a", "--anomaly", type=str, required=False, default="growing_circle")
     parser.add_argument("-m", "--method", type=str, required=False, default="pixel")
     parser.add_argument("--beta", type=float, required=False, default=5)
-    parser.add_argument('-f', '--freeze', type=str, required=False, default='y',
+    parser.add_argument('-f', '--freeze', type=str, required=False, default='n',
                         help='freeze convolution layer ? default = y')
     parser.add_argument('--dataset', type=str, required=True, default="noacc",
                         help='Use the models trained on dataset "acc" or "noacc"')
@@ -211,7 +211,7 @@ if __name__=="__main__":
 
     # Setting some parameters
     beta = args.beta
-    n = 10  # The number of subject to consider
+    n = 200  # The number of subject to consider
     num_images = n*10
     latent_dimension = 4
     num_workers = round(os.cpu_count()/6)
@@ -247,6 +247,7 @@ if __name__=="__main__":
     model_VAE = model_VAE.to(device)
     model_VAE.eval()
     model_VAE.training = False
+    model_VAE.to(device)
 
 
     # Loading LVAE model
@@ -255,6 +256,7 @@ if __name__=="__main__":
     model_LVAE = model_LVAE.to(device)
     model_LVAE.eval()
     model_LVAE.training = False
+    model_LVAE.to(device)
     longitudinal_estimator = Leaspy.load(longitudinal_saving_path)
 
     # Loading thresholds and dataset
@@ -289,20 +291,20 @@ if __name__=="__main__":
 
     with torch.no_grad():
         # This variable will store how many times a image/pixel will be considered as anomalous
-        total_detection_anomaly_VAE = torch.zeros(size_anomaly) 
-        total_detection_anomaly_LVAE = torch.zeros(size_anomaly) 
+        total_detection_anomaly_VAE = torch.zeros(size_anomaly).to(device)
+        total_detection_anomaly_LVAE = torch.zeros(size_anomaly).to(device)
         
         for data in data_loader:
             images = data[0]
             images = images.to(device)
             id = data[2][0]
 
-            pixel_errors_VAE = torch.zeros(size_anomaly) if method != "image" else None
-            pixel_errors_LVAE = torch.zeros(size_anomaly) if method != "image" else None
+            pixel_errors_VAE = torch.zeros(size_anomaly).to(device) if method != "image" else None
+            pixel_errors_LVAE = torch.zeros(size_anomaly).to(device) if method != "image" else None
 
             # These vectors of boolean will be used for the plot
-            anomaly_detected_vector_VAE = torch.zeros(10, dtype=bool)   
-            anomaly_detected_vector_LVAE = torch.zeros(10, dtype=bool)  # This vector of boolean will be used for the plot
+            anomaly_detected_vector_VAE = torch.zeros(10, dtype=bool).to(device)   
+            anomaly_detected_vector_LVAE = torch.zeros(10, dtype=bool).to(device)  # This vector of boolean will be used for the plot
             
             # VAE and LVAE image reconstruction
             mu_VAE, logvar_VAE, recon_images_VAE, _ = model_VAE(images)    # mu.shape = (10,4)
@@ -314,15 +316,15 @@ if __name__=="__main__":
                 # Compute VAE's reconstruction error
                 reconstruction_error_VAE = loss_function(recon_images_VAE[i, 0], images[i, 0], method)
                 
-                compare_to_threshold = reconstruction_error_VAE > VAE_threshold_99   #  !!! Here to change with threshold to use
+                compare_to_threshold = reconstruction_error_VAE > VAE_threshold_99   #  !!! Here to change which threshold to use
                 anomaly_detected_vector_VAE[i] += (compare_to_threshold).any()
                 total_detection_anomaly_VAE[i] += compare_to_threshold
 
                 if method != "image":
                     pixel_errors_VAE[i] = compare_to_threshold 
 
-                VAE_anomaly_detected_95 += torch.sum(reconstruction_error_VAE > VAE_threshold_95).item()
-                VAE_anomaly_detected_99 += torch.sum(reconstruction_error_VAE > VAE_threshold_99).item()
+                VAE_anomaly_detected_95 += torch.sum(reconstruction_error_VAE > VAE_threshold_95).detach().cpu().item()
+                VAE_anomaly_detected_99 += torch.sum(reconstruction_error_VAE > VAE_threshold_99).detach().cpu().item()
 
                 # Compute LVAE's reconstruction error
                 reconstruction_error = loss_function(recon_images_LVAE[i, 0], images[i, 0], method)
@@ -333,8 +335,8 @@ if __name__=="__main__":
                 if method != "image":
                     pixel_errors_LVAE[i] = compare_to_threshold 
 
-                LVAE_anomaly_detected_95 += torch.sum(reconstruction_error > LVAE_threshold_95).item()
-                LVAE_anomaly_detected_99 += torch.sum(reconstruction_error > LVAE_threshold_99).item()
+                LVAE_anomaly_detected_95 += torch.sum(reconstruction_error > LVAE_threshold_95).detach().cpu().item()
+                LVAE_anomaly_detected_99 += torch.sum(reconstruction_error > LVAE_threshold_99).detach().cpu().item()
 
             # For a subject, plot the anomalous image, the reconstructed image and the residual
             plot_anomaly(images, recon_images_VAE, recon_images_LVAE,
@@ -345,6 +347,15 @@ if __name__=="__main__":
     if method == "image":   # pixel or pixel_all would have too many bar to plot making it unreadable
         plot_anomaly_bar(total_detection_anomaly_VAE.flatten(), "VAE", anomaly, method, num_images)
         plot_anomaly_bar(total_detection_anomaly_LVAE.flatten(), "LVAE", anomaly, method, num_images)
+
+    if method == "pixel":
+        total_detection_anomaly_VAE = torch.sum(total_detection_anomaly_VAE.detach().cpu(), dim=1).tolist()
+        total_detection_anomaly_LVAE = torch.sum(total_detection_anomaly_LVAE.detach().cpu(), dim=1).tolist()
+        anomaly_dict_pixel = {}
+        anomaly_dict_pixel["VAE_pixel_anomaly_99"] = total_detection_anomaly_VAE
+        anomaly_dict_pixel["LVAE_pixel_anomaly_99"] = total_detection_anomaly_LVAE
+        with open(f'./results_pixel_AD_{anomaly}.json', 'w') as f:
+            json.dump(anomaly_dict_pixel, f, ensure_ascii=False)
 
 
     ######## PRINTING SOME RESULTS ########

@@ -51,7 +51,7 @@ def get_longitudinal_images(data, model, fitted_longitudinal_estimator,
 def CV_VAE(model_type, fold_index_list, test_set, nn_saving_path, dataset_name,
            device='cuda' if torch.cuda.is_available() else 'cpu', plot_save_path=None,
            latent_dimension=4, gamma=100, beta=5, freeze="no_freeze",
-           batch_size=256, num_worker=round(os.cpu_count()/4), cv_patch=False):
+           batch_size=256, num_worker=round(os.cpu_count()/4), cv_patch=False, patch_size=15):
 
     best_fold = 0
     best_loss = torch.inf
@@ -75,13 +75,23 @@ def CV_VAE(model_type, fold_index_list, test_set, nn_saving_path, dataset_name,
         losses = []
 
 
-        for x in data_loader:
-            x = x.to(device)
+        with torch.no_grad():
+            for x in data_loader:
+                if cv_patch:
+                    x = x.reshape(-1, 1, patch_size, patch_size)
+                x = x.to(device)
 
-            mu, logvar, recon_x, _ = model(x)
-            reconstruction_loss, kl_loss = spatial_auto_encoder_loss(mu, logvar, recon_x, x)
-            loss = reconstruction_loss + kl_loss * model.beta
-            losses.append(loss)
+                mu, logvar, recon_x, _ = model(x)
+                reconstruction_loss, kl_loss = spatial_auto_encoder_loss(mu, logvar, recon_x, x)
+                loss = reconstruction_loss + kl_loss * model.beta
+                losses.append(loss)
+
+            test_mean_loss = sum(losses) / len(losses)
+            folds_test_loss[fold_index] = test_mean_loss.detach().to("cpu")
+
+            if test_mean_loss < best_loss:
+                best_loss = test_mean_loss
+                best_fold = fold_index
 
         test_mean_loss = sum(losses) / len(losses)
         folds_test_loss[fold_index] = test_mean_loss.detach().to("cpu")
@@ -131,13 +141,15 @@ def CV_LVAE(model_type, fold_index_list, test_set, nn_saving_path, longitudinal_
         longitudinal_estimator = Leaspy.load(longitudinal_saving_path+f"_fold_{fold_index}.json2")
         losses = [] 
 
-        for data in test_data_loader:
-            x = data[0].to(device).float()
-            mus, logvars, recon_x = get_longitudinal_images(data, model, longitudinal_estimator)
-            reconstruction_loss, kl_loss = spatial_auto_encoder_loss(mus, logvars, recon_x, x)
+        with torch.no_grad():
 
-            loss = reconstruction_loss + model.beta * kl_loss       # Add alignment loss for longitudinal aspect ?     
-            losses.append(loss)
+            for data in test_data_loader:
+                x = data[0].to(device).float()
+                mus, logvars, recon_x = get_longitudinal_images(data, model, longitudinal_estimator)
+                reconstruction_loss, kl_loss = spatial_auto_encoder_loss(mus, logvars, recon_x, x)
+
+                loss = reconstruction_loss + model.beta * kl_loss       # Add alignment loss for longitudinal aspect ?     
+                losses.append(loss)
 
         test_mean_loss = sum(losses) / len(losses)
         folds_test_loss[fold_index] = test_mean_loss.detach().to("cpu")

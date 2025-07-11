@@ -141,17 +141,17 @@ else:
 
 best_loss = 1e15
 
-validation_dataset = LongitudinalDataset2D_patch('data_csv/starmen_patch_validation_set.csv', read_image=open_npy, transform=transformations)
-easy_dataset = LongitudinalDataset2D_patch('data_csv/starmen_patch_train_set.csv', read_image=open_npy, transform=transformations)
+# validation_dataset = LongitudinalDataset2D_patch('data_csv/starmen_patch_validation_set.csv', read_image=open_npy, transform=transformations)
+# easy_dataset = LongitudinalDataset2D_patch('data_csv/starmen_patch_train_set.csv', read_image=open_npy, transform=transformations)
 
-data_loader = DataLoader(easy_dataset, batch_size=10, num_workers=num_worker, shuffle=False, collate_fn=longitudinal_collate_2D_patch)
-validation_data_loader = DataLoader(validation_dataset, batch_size=10, num_workers=num_worker, shuffle=False, collate_fn=longitudinal_collate_2D_patch)
+# data_loader = DataLoader(easy_dataset, batch_size=10, num_workers=num_worker, shuffle=False, collate_fn=longitudinal_collate_2D_patch)
+# validation_data_loader = DataLoader(validation_dataset, batch_size=10, num_workers=num_worker, shuffle=False, collate_fn=longitudinal_collate_2D_patch)
 
 os.makedirs(os.path.dirname(nn_saving_path), exist_ok=True)
 os.makedirs(os.path.dirname(longitudinal_saving_path), exist_ok=True)
 
 best_loss, lvae_losses = train_kfold(CVAE2D_PATCH, path_best_fold_model, folds_index, algo_settings, 
-                                     nb_epochs=100, lr=initial_lr, freeze=freeze,
+                                     nb_epochs=100, lr=initial_lr, freeze=freeze, latent_dimension=latent_representation_size,
                                      nn_saving_path=nn_saving_path, longitudinal_saving_path=longitudinal_saving_path,
                                      loss_graph_saving_path=f"{output_path}/loss_longitudinal_only", previous_best_loss=best_loss,
                                      spatial_loss=loss_function, batch_size=batch_size, num_workers=num_worker)
