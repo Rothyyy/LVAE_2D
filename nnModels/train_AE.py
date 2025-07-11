@@ -169,6 +169,8 @@ def train_AE_kfold(model_type, k_folds_index_list, nb_epochs=100, device='cuda' 
             with torch.no_grad():
                 for x in valid_data_loader:
                     x = x.to(device)
+                    if train_patch:
+                        x = x.reshape(-1, 1, patch_size, patch_size)
                     mu, logvar, recon_x, _ = model(x)
                     reconstruction_loss, kl_loss = spatial_loss(mu, logvar, recon_x, x)
                     loss = reconstruction_loss + kl_loss * model.beta
@@ -188,7 +190,7 @@ def train_AE_kfold(model_type, k_folds_index_list, nb_epochs=100, device='cuda' 
             else:
                 nb_epochs_without_loss_improvement += 1
             
-            if nb_epochs_without_loss_improvement >= 30:
+            if nb_epochs_without_loss_improvement >= 5:
                 break
 
             plt.plot(np.arange(1, len(losses) + 1), losses)

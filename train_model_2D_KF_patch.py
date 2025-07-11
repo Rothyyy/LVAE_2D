@@ -112,7 +112,7 @@ os.makedirs(os.path.dirname(f"saved_models_2D/dataset_{temp_args.dataset}/VAE_pa
 path_best_fold_model = f"saved_models_2D/dataset_{temp_args.dataset}/best_patch_fold_{temp_args.nnmodel_name}_{temp_args.dimension}_{temp_args.beta}_{temp_args.gamma}_{temp_args.iterations}.pth"
 
 if args.skip == "n":
-    train_AE_kfold(CVAE2D_PATCH, folds_index, nb_epochs=5, device=device,
+    train_AE_kfold(CVAE2D_PATCH, folds_index, nb_epochs=50, device=device,
                 nn_saving_path=VAE_saving_path,
                 loss_graph_saving_path=output_path, spatial_loss=loss_function,
                 batch_size=batch_size, num_workers=num_worker,
