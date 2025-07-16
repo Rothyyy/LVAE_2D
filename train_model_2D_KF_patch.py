@@ -40,7 +40,7 @@ parser.add_argument('--iterations', type=int, required=False, default=200,
                     help='Number of iterations when training the longitudinal estimator, default = 200')
 parser.add_argument('--lr', type=float, required=False, default=1e-4,
                     help='Learning rate to train the VAE, default = 1e-4')
-parser.add_argument('--batch_size', type=int, required=False, default=100,
+parser.add_argument('--batch_size', type=int, required=False, default=20,
                     help='batch_size to train the VAE, default = 5')
 parser.add_argument('-f', '--freeze', type=str, required=False, default='n',
                     help='freeze convolution layer ? default = n')
@@ -154,7 +154,7 @@ best_loss, lvae_losses = train_kfold(CVAE2D_PATCH, path_best_fold_model, folds_i
                                      nb_epochs=100, lr=initial_lr, freeze=freeze, latent_dimension=latent_representation_size,
                                      nn_saving_path=nn_saving_path, longitudinal_saving_path=longitudinal_saving_path,
                                      loss_graph_saving_path=f"{output_path}/loss_longitudinal_only", previous_best_loss=best_loss,
-                                     spatial_loss=loss_function, batch_size=batch_size, num_workers=num_worker)
+                                     spatial_loss=loss_function, batch_size=batch_size, num_workers=num_worker, train_patch=True)
 
 best_fold_LVAE = CV_LVAE(CVAE2D_PATCH, folds_index, test_df, nn_saving_path, longitudinal_saving_path, temp_args.dataset, plot_save_path=output_path, cv_patch=True)
 
