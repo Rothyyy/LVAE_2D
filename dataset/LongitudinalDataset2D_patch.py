@@ -37,11 +37,15 @@ class LongitudinalDataset2D_patch(Dataset):
             ['subject_id', 'age'])
         patches = [self.read_image(summary_rows.iloc[i]['patch_path']) for i in range(len(summary_rows))]
         patches = torch.cat(patches, dim=0)
+        patch_id_list = [list(range(start, end + 1)) 
+                        for start, end in zip(summary_rows["patch_id_min"], summary_rows["patch_id_max"])
+                        ]
+
         if len(patches) == 0:
-            return None, None, None
+            return None, None, None, None
 
         # TODO: find a better way to code this, so there's no need to read each image 2 times
-        return patches, [summary_rows['age'].iloc[i] for i in range(len(summary_rows))], patient_id
+        return patches, [summary_rows['age'].iloc[i] for i in range(len(summary_rows))], patient_id, patch_id_list
     
     def get_patches_from_id(self, subject_id):
         """
@@ -55,10 +59,13 @@ class LongitudinalDataset2D_patch(Dataset):
             ['subject_id', 'age'])
         patches = [self.read_image(summary_rows.iloc[i]['patch_path']) for i in range(len(summary_rows))]
         patches = torch.cat(patches, dim=0)
+        patch_id_list = [list(range(start, end + 1)) 
+                        for start, end in zip(summary_rows["patch_id_min"], summary_rows["patch_id_max"])
+                        ]
         if len(patches) == 0:
-            return None, None, None
+            return None, None, None, None
 
-        return patches, [summary_rows['age'].iloc[i] for i in range(len(summary_rows))]
+        return patches, [summary_rows['age'].iloc[i] for i in range(len(summary_rows))], patch_id_list
 
 
 def longitudinal_collate_2D_patch(batch, device='cuda' if torch.cuda.is_available() else 'cpu'):
@@ -67,6 +74,7 @@ def longitudinal_collate_2D_patch(batch, device='cuda' if torch.cuda.is_availabl
     images = images.unsqueeze(1)
     infos = [item[1] for item in batch if item[0] is not None]
     # images = images.reshape(len(infos),1,)
-    ids = [item[2] for item in batch if item[0] is not None]
+    subject_ids = [item[2] for item in batch if item[0] is not None]
+    patch_ids = [item[3] for item in batch if item[0] is not None]
 
-    return [images, infos, ids]
+    return [images, infos, subject_ids, patch_ids]

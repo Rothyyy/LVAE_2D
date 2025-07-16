@@ -78,6 +78,7 @@ if __name__=="__main__":
 
     # Process data to get a csv file 
     data = []
+    patch_id = 0
     for patient_id in range(1000):  # For every subject
         print("Patient :", patient_id)
         for t in range(10):     # For every timestamp
@@ -85,16 +86,21 @@ if __name__=="__main__":
             # Load image and get all patches
             path_image = f"./data_starmen/images/SimulatedData__Reconstruction__starman__subject_s{patient_id}__tp_{t}.npy"
             image = np.load(path_image) 
-            patches, centers = extract_centered_patches(image, patch_size)
-            # Store the information in a row
-            np.save(f"./data_starmen/images_patch/Starman__subject_s{patient_id}__tp_{t}_patches.npy", patches)
+            # patches, centers = extract_centered_patches(image, patch_size)
+            # # Store the information in a row
+            # np.save(f"./data_starmen/images_patch/Starman__subject_s{patient_id}__tp_{t}_patches.npy", patches)
+            
             row = {
                 "subject_id": str(patient_id),
+                "patch_id_min": patch_id,
+                "patch_id_max": patch_id + num_patch - 1,
                 "age": ages[patient_id*10 + t],
-                # "center": centers[patch_i],
                 "patch_path": f"./data_starmen/images_patch/Starman__subject_s{patient_id}__tp_{t}_patches.npy" ,
             }
             data.append(row)
+
+        patch_id += num_patch
+            
 
     data_df = pd.DataFrame(data)
     data_df.to_csv("data_csv/starmen_dataset_patch.csv")

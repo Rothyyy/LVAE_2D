@@ -9,7 +9,7 @@ import os
 import sys
 from longitudinalModel.project_encodings_for_training import project_encodings_for_training
 from longitudinalModel.test import test
-from longitudinalModel.fit_longitudinal_estimator_on_nn import fit_longitudinal_estimator_on_nn
+from longitudinalModel.fit_longitudinal_estimator_on_nn import fit_longitudinal_estimator_on_nn, fit_longitudinal_estimator_on_nn_patch
 from nnModels.losses import longitudinal_loss, spatial_auto_encoder_loss
 from torch.optim.lr_scheduler import CosineAnnealingWarmRestarts
 import torch.nn.functional as F
@@ -207,8 +207,8 @@ def train_kfold(model_type, path_best_fold_model, k_folds_index_list,
             valid_dataset = LongitudinalDataset2D_patch(valid_df, transform=transformations)
             train_dataset = LongitudinalDataset2D_patch(train_df, transform=transformations)
 
-            valid_data_loader = DataLoader(valid_dataset, batch_size=batch_size, num_workers=num_workers, shuffle=True, pin_memory=True, collate_fn=longitudinal_collate_2D_patch)
-            train_data_loader = DataLoader(train_dataset, batch_size=batch_size, num_workers=num_workers, shuffle=True, pin_memory=True, collate_fn=longitudinal_collate_2D_patch)
+            valid_data_loader = DataLoader(valid_dataset, batch_size=batch_size, num_workers=num_workers, shuffle=False, pin_memory=True, collate_fn=longitudinal_collate_2D_patch)
+            train_data_loader = DataLoader(train_dataset, batch_size=batch_size, num_workers=num_workers, shuffle=False, pin_memory=True, collate_fn=longitudinal_collate_2D_patch)
 
         else:
             valid_dataset = LongitudinalDataset2D(valid_df, transform=transformations)
@@ -225,9 +225,14 @@ def train_kfold(model_type, path_best_fold_model, k_folds_index_list,
             total_recon_loss, total_kl_loss, total_alignment_loss = 0.0, 0.0, 0.0
 
             ### Fit the longitudinal mixed effect model
-            longitudinal_estimator, encodings_df = fit_longitudinal_estimator_on_nn(train_data_loader, model, device,
-                                                                                    longitudinal_estimator,
-                                                                                    longitudinal_estimator_settings)
+            if train_patch:
+                longitudinal_estimator, encodings_df = fit_longitudinal_estimator_on_nn_patch(train_data_loader, model, device,
+                                                                                            longitudinal_estimator,
+                                                                                            longitudinal_estimator_settings, patch_size=15)
+            else:
+                longitudinal_estimator, encodings_df = fit_longitudinal_estimator_on_nn(train_data_loader, model, device,
+                                                                                        longitudinal_estimator,
+                                                                                        longitudinal_estimator_settings)
             timepoints_of_projection, predicted_latent_variables = project_encodings_for_training(encodings_df,
                                                                                                 longitudinal_estimator)
             
@@ -287,7 +292,7 @@ def train_kfold(model_type, path_best_fold_model, k_folds_index_list,
             else:
                 nb_epochs_without_loss_improvement += 1
 
-            if nb_epochs_without_loss_improvement >= 30:
+            if nb_epochs_without_loss_improvement >= 10:
                 break
         print("\n")
         plt.plot(np.arange(1, len(losses) + 1), losses, label="Train loss (LVAE)")
