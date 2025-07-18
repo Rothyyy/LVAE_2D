@@ -6,7 +6,6 @@ plots_storage
 script/*.sh
 *.zip
 log/
-*.ipynb
 visu/
 anomaly/figure_reconstruction/dataset_acc/*
 anomaly/figure_reconstruction/dataset_noacc/*

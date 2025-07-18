@@ -3,7 +3,7 @@ import numpy as np
 import argparse
 import os
 
-def extract_centered_patches(image, patch_size=5):
+def extract_centered_patches(image, patch_size=15):
     """
     This functions takes as input an image (numpy array) and the patch size.
     It returns the patches centered in every pixel not in the border and the coordinates of its center.
@@ -86,9 +86,9 @@ if __name__=="__main__":
             # Load image and get all patches
             path_image = f"./data_starmen/images/SimulatedData__Reconstruction__starman__subject_s{patient_id}__tp_{t}.npy"
             image = np.load(path_image) 
-            # patches, centers = extract_centered_patches(image, patch_size)
-            # # Store the information in a row
-            # np.save(f"./data_starmen/images_patch/Starman__subject_s{patient_id}__tp_{t}_patches.npy", patches)
+            patches, centers = extract_centered_patches(image, patch_size)
+            # Store the information in a row
+            np.save(f"./data_starmen/images_patch/Starman__subject_s{patient_id}__tp_{t}_patches.npy", patches)
             
             row = {
                 "subject_id": str(patient_id),

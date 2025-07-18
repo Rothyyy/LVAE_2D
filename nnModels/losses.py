@@ -26,6 +26,9 @@ def image_reconstruction_error(reconstructed, input, method):
     recon_error = torch.sum((reconstructed - input) ** 2)
     return recon_error
 
+def image_reconstruction_error_patch(reconstructed, input):
+    recon_error = torch.sum((reconstructed - input) ** 2, dim=(1, 2, 3))
+    return recon_error
 
 def pixel_reconstruction_error(reconstructed, input, method):
     """

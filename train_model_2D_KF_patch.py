@@ -94,7 +94,7 @@ print(f"{args.nnmodel_name}_{beta}_{gamma}_{latent_representation_size}_{args.it
 
 ### Hyperparameters of the longitudinal estimator
 all_losses = []
-algo_settings = AlgorithmSettings('mcmc_saem', n_iter=args.iterations, seed=45, noise_model="gaussian_diagonal")
+algo_settings = AlgorithmSettings('mcmc_saem', n_iter=args.iterations, seed=45, noise_model="gaussian_diagonal", device=device)
 
 # Preparation of the data
 transformations = transforms.Compose([])
