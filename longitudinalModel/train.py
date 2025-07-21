@@ -21,6 +21,7 @@ from torch.utils.data import DataLoader
 from dataset.LongitudinalDataset2D import LongitudinalDataset2D, longitudinal_collate_2D
 from dataset.LongitudinalDataset2D_patch import LongitudinalDataset2D_patch, longitudinal_collate_2D_patch
 
+from utils.loading_image import open_npy
 
 def is_reconstruction_well_ordered(times, subject_ids, reconstruction_dict):
     for i in range(len(subject_ids)):
@@ -28,9 +29,6 @@ def is_reconstruction_well_ordered(times, subject_ids, reconstruction_dict):
             if times[i][t] != reconstruction_dict[subject_ids[i]][t]:
                 return False
     return True
-
-def open_npy(path):
-    return torch.from_numpy(np.load(path)).float()
 
 
 def train(model, data_loader, longitudinal_estimator=None,
@@ -159,7 +157,7 @@ def train(model, data_loader, longitudinal_estimator=None,
 
 
 def train_kfold(model_type, path_best_fold_model, k_folds_index_list,
-          longitudinal_estimator_settings=None, nb_epochs=100, lr=0.01, freeze = "freeze_conv",
+          longitudinal_estimator_settings=None, nb_epochs=100, lr=0.01, freeze = "no_freeze",
           device='cuda' if torch.cuda.is_available() else 'cpu', nn_saving_path=None, longitudinal_saving_path=None,
           loss_graph_saving_path=None, previous_best_loss=1e15, spatial_loss=spatial_auto_encoder_loss,
           batch_size=256, num_workers=round(os.cpu_count()/4),
@@ -182,10 +180,10 @@ def train_kfold(model_type, path_best_fold_model, k_folds_index_list,
         model.device = device
         model.to(device)
 
-        if freeze == "freeze_conv":
-            model.freeze_conv()
-        if freeze == "freeze_all":
-            model.freeze_all()
+        # if freeze == "freeze_conv":
+        #     model.freeze_conv()
+        # if freeze == "freeze_all":
+        #     model.freeze_all()
 
         longitudinal_estimator = Leaspy("linear", noise_model="gaussian_diagonal", source_dimension=latent_dimension - 1)
 
@@ -296,7 +294,7 @@ def train_kfold(model_type, path_best_fold_model, k_folds_index_list,
 
 
 def train_kfold_patch(model_type, path_best_fold_model, k_folds_index_list,
-          longitudinal_estimator_settings=None, nb_epochs=100, lr=0.01, freeze = "freeze_conv",
+          longitudinal_estimator_settings=None, nb_epochs=100, lr=0.01, freeze = "no_freeze",
           device='cuda' if torch.cuda.is_available() else 'cpu', nn_saving_path=None, longitudinal_saving_path=None,
           loss_graph_saving_path=None, previous_best_loss=1e15, spatial_loss=spatial_auto_encoder_loss,
           batch_size=256, num_workers=round(os.cpu_count()/4),
@@ -319,10 +317,10 @@ def train_kfold_patch(model_type, path_best_fold_model, k_folds_index_list,
         model.device = device
         model.to(device)
 
-        if freeze == "freeze_conv":
-            model.freeze_conv()
-        if freeze == "freeze_all":
-            model.freeze_all()
+        # if freeze == "freeze_conv":
+        #     model.freeze_conv()
+        # if freeze == "freeze_all":
+        #     model.freeze_all()
 
         longitudinal_estimator = Leaspy("linear", noise_model="gaussian_diagonal", source_dimension=latent_dimension - 1)
 

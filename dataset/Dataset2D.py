@@ -5,14 +5,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 from torch.utils.data import DataLoader
 from torchvision import transforms
+from utils.loading_image import open_npy
 
-
-def numpy_to_tensor(img):
-    tensor = torch.from_numpy(img.round()).float()
-    return tensor
-
-def open_npy(path):
-    return torch.from_numpy(np.load(path)).float()
 
 class Dataset2D(Dataset):
     """

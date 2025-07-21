@@ -2,10 +2,5 @@ __pycache__/
 data_starmen/images/*.npy
 data_starmen/anomaly_images/*.npy
 data_starmen/images_patch/*.npy
-plots_storage
-script/*.sh
 *.zip
-log/
-visu/
-anomaly/figure_reconstruction/dataset_acc/*
-anomaly/figure_reconstruction/dataset_noacc/*
+

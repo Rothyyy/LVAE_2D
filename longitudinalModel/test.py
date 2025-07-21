@@ -10,9 +10,7 @@ from nnModels.losses import longitudinal_loss, spatial_auto_encoder_loss, loss_b
 import torch.nn.functional as F
 from torch.utils.data import DataLoader
 
-
-def open_npy(path):
-    return torch.from_numpy(np.load(path).round()).float()
+from utils.loading_image import open_npy
 
 
 def test(model, data_loader, longitudinal_estimator=None,

@@ -3,10 +3,8 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 from torch.utils.data import Dataset
+from utils.loading_image import open_npy
 
-
-def open_npy(path):
-    return torch.from_numpy(np.load(path)).float()
 
 class LongitudinalDataset2D(Dataset):
     # TODO: add to readme how to format the csv file
