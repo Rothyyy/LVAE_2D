@@ -121,7 +121,7 @@ def plot_recon_error_histogram(recon_error_list, model_name, method):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("-m", "--method", type=str, required=False, default="pixel")
+    parser.add_argument("--method", type=str, required=False, default="pixel")
     parser.add_argument("-set", type=str, required=False, default="test")
     parser.add_argument("--dim", type=int, required=False, default=4)
     parser.add_argument("--beta", type=float, required=False, default=5)

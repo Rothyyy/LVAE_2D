@@ -9,7 +9,5 @@ cd /home/rsochet/Code/LVAE_2D
 module load conda
 conda activate env_LVAE_2D
 
-python train_model_2D_KF.py --dataset noacc -f y
-python train_model_2D_KF.py --dataset noacc -f n -skip y
-python train_model_2D_KF.py --dataset noacc -f yy -skip y
+python -m train_model_2D_KF --dimension 4 --beta 5 --gamma 100 --iterations 200
 

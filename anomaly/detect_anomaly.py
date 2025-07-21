@@ -21,7 +21,7 @@ from utils.display_individual_observations_2D import project_encodings_for_resul
 from utils.loading_image import open_npy
 from dataset.LongitudinalDataset2D import LongitudinalDataset2D, longitudinal_collate_2D
 
-from plot_anomaly import plot_anomaly_bar, plot_anomaly_figure
+from .plot_anomaly import plot_anomaly_bar, plot_anomaly_figure
 
 
 
@@ -30,7 +30,7 @@ if __name__=="__main__":
     parser.add_argument("-a", "--anomaly", type=str, required=False, default="growing_circle")
     parser.add_argument("--method", type=str, required=False, default="pixel")
     parser.add_argument("--beta", type=float, required=False, default=5)
-    parser.add_argument("--dim", type=int, required=False, default=4)
+    parser.add_argument("--dimension", type=int, required=False, default=4)
     args = parser.parse_args()
 
     anomaly = args.anomaly
@@ -76,7 +76,7 @@ if __name__=="__main__":
     # Getting the model's path
     model_VAE_path = f"saved_models_2D/best_fold_CVAE2D_{latent_dimension}_{beta}.pth"
     model_LVAE_path = f"saved_models_2D/best_fold_CVAE2D_{latent_dimension}_{beta}_100_200.pth2"
-    longitudinal_saving_path = f"saved_models_2Dbest_fold_longitudinal_estimator_params_CVAE2D_{latent_dimension}_{beta}_100_200.json2"
+    longitudinal_saving_path = f"saved_models_2D/best_fold_longitudinal_estimator_params_CVAE2D_{latent_dimension}_{beta}_100_200.json2"
     
     # Loading VAE model
     model_VAE = CVAE2D_ORIGINAL(latent_dimension)

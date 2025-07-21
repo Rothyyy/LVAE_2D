@@ -34,8 +34,8 @@ def plot_anomaly_figure(original_image, reconstructed_image_VAE, reconstructed_i
     We enter this function when an anomaly is detected.
     The function will plot the image and save it in a pdf file.
     """
-    os.makedirs(f"anomaly/figure_reconstruction/{anomaly_type}/{method}", exist_ok=True)
-    save_path = f"anomaly/figure_reconstruction/{anomaly_type}/{method}/AD_subject_{id}.pdf"
+    os.makedirs(f"plots/fig_anomaly_reconstruction/{anomaly_type}/{method}", exist_ok=True)
+    save_path = f"plots/fig_anomaly_reconstruction/{anomaly_type}/{method}/AD_subject_{id}.pdf"
 
     # Compute the residual and binary mask
     if method == "image":

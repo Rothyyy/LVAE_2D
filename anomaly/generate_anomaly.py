@@ -9,8 +9,11 @@ import pandas as pd
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("-n", "--n_sample", type=int, required=False, default=5)
-    parser.add_argument("-a", "--anomaly", type=str, required=False, default="darker_circle")
-    parser.add_argument("--csv", type=bool, required=False, default=True)
+    parser.add_argument("-a", "--anomaly", type=str, required=False, default="darker_line")
+    parser.add_argument("-p", "--patch", type=bool, required=False, default=True,
+                        help="Extract patches and create csv file ?")
+    parser.add_argument("-s", "--size", type=int, required=False, default=15,
+                        help="patch size")
     parser.add_argument("-set", type=str, required=False, default="test",
                         help="choose which set ('train', 'test', 'all') to consider when generating anomalous images.")
     args = parser.parse_args()
@@ -35,7 +38,9 @@ if __name__ == "__main__":
     else:
         random_subject = np.random.choice(1000, size=n_sample, replace=False)
     
-    to_csv = args.csv
+    get_patch = args.patch
+    patch_size = args.size
+
     data = []
     f = open("data_starmen/path_to_visit_ages_file.txt", "r")
     ages_list = f.read().split()
@@ -81,12 +86,22 @@ if __name__ == "__main__":
                            max(0, 200-20*round(ages[t]-ages[0])))), 2)
 
             # Create the data that will be used for anomaly detection
-            if to_csv:
+
+
+            if get_patch:
                 row = {
-                "age": ages[t] , 
-                "image_path": f"./data_starmen/anomaly_images/{anomaly_image_name}" ,
-                "subject_id": str(subject)
-            }
+                    "age": ages[t] , 
+                    "image_path": f"./data_starmen/anomaly_images/{anomaly_image_name}" ,
+                    "subject_id": str(subject)
+                }
+                data.append(row)
+
+            else:
+                row = {
+                    "age": ages[t] , 
+                    "image_path": f"./data_starmen/anomaly_images/{anomaly_image_name}" ,
+                    "subject_id": str(subject)
+                }
                 data.append(row)
 
             # Saving the image in npy format

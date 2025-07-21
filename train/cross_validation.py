@@ -42,7 +42,6 @@ def CV_VAE(model_type, fold_index_list, test_set, nn_saving_path,
         model.gamma = gamma
         model.beta = beta
         model.load_state_dict(torch.load(nn_saving_path+f"_fold_{fold_index}.pth", map_location='cpu'))
-
         model.device = device
         model.to(device)
         model.eval()
@@ -156,38 +155,31 @@ if __name__ == "__main__":
     parser.add_argument('--iterations', type=int, required=False, default=200,
                     help='Number of iterations when training the longitudinal estimator, default = 200')
     parser.add_argument('--skip', type=bool, required=False, default=False)
-    temp_args, _ = parser.parse_known_args()
-
-    parser.add_argument('--nnmodel_path', type=str, required=False,
-                        default=f'saved_models_2D/VAE_folds/CVAE2D_{temp_args.dimension}_{temp_args.beta}_{temp_args.gamma}_{temp_args.iterations}',
-                        help='path where the neural network model parameters are saved')
-    parser.add_argument('--LVAE_nnmodel_path', type=str, required=False,
-                        default=f'saved_models_2D/LVAE_folds/CVAE2D_{temp_args.dimension}_{temp_args.beta}_{temp_args.gamma}_{temp_args.iterations}',
-                        help='path where the neural network model parameters are saved')
-    parser.add_argument('--longitudinal_estimator_path', type=str, required=False,
-                        default=f'saved_models_2D/LVAE_folds/longitudinal_estimator_params_CVAE2D_{temp_args.dimension}_{temp_args.beta}_{temp_args.gamma}_{temp_args.iterations}',
-                        help='path where the longitudinal estimator parameters are saved')
     args = parser.parse_args()
 
     test_set_path = "./data_csv/starmen_test_set.csv"
     test_set = pd.read_csv(test_set_path)
-    VAE_saving_path = args.nnmodel_path
-    LVAE_saving_path = args.LVAE_nnmodel_path
-    dataset_name = args.dataset
-    longitudinal_saving_path = args.longitudinal_estimator_path
+
     batch_size = args.batch_size
     latent_representation_size = args.dimension
     gamma = args.gamma
     beta = args.beta
+    iterations = args.iterations
 
+    # Path to saved model
+    VAE_saving_path = f'saved_models_2D/VAE_folds/CVAE2D_{latent_representation_size}_{beta}'
+    LVAE_saving_path = f'saved_models_2D/LVAE_folds/CVAE2D_{latent_representation_size}_{beta}_{gamma}_{iterations}'
+    longitudinal_saving_path = f'saved_models_2D/LVAE_folds/longitudinal_estimator_params_CVAE2D_{latent_representation_size}_{beta}_{gamma}_{iterations}'
+
+    # Path to save the best fold
     save_best_fold_path_VAE = f"saved_models_2D/best_fold_CVAE2D_{latent_representation_size}_{beta}.pth"
-    save_best_fold_path_LVAE = f"saved_models_2D/best_fold_CVAE2D_{latent_representation_size}_{beta}_{gamma}_{args.iterations}.pth"
+    save_best_fold_path_LVAE = f"saved_models_2D/best_fold_CVAE2D_{latent_representation_size}_{beta}_{gamma}_{iterations}.pth"
     save_best_fold_path_longitudinal_estimator = f"saved_models_2D/best_fold_longitudinal_estimator_params_CVAE2D_{latent_representation_size}_{beta}_{gamma}_{args.iterations}.json"
 
 
     # Saving the best VAE model in the right folder
     if args.skip == False:
-        best_fold = CV_VAE(CVAE2D_ORIGINAL, [i for i in range(8)], test_set, VAE_saving_path, dataset_name,
+        best_fold = CV_VAE(CVAE2D_ORIGINAL, [i for i in range(8)], test_set, VAE_saving_path,
                             latent_dimension=latent_representation_size, gamma=gamma, beta=beta, batch_size=batch_size)
         print("Best VAE fold =", best_fold)
         
@@ -200,7 +192,7 @@ if __name__ == "__main__":
 
 
     # Saving the best LVAE model in the right folder
-    best_fold = CV_LVAE(CVAE2D_ORIGINAL, [i for i in range(8)], test_set, LVAE_saving_path, longitudinal_saving_path, dataset_name,
+    best_fold = CV_LVAE(CVAE2D_ORIGINAL, [i for i in range(8)], test_set, LVAE_saving_path, longitudinal_saving_path,
                         latent_dimension=latent_representation_size, gamma=gamma, beta=beta)
     print("Best LVAE fold =", best_fold)
 
