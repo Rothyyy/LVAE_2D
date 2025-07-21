@@ -152,7 +152,7 @@ if __name__=="__main__":
     parser.add_argument("-a", "--anomaly", type=str, required=False, default="growing_circle")
     parser.add_argument("-m", "--method", type=str, required=False, default="pixel")
     parser.add_argument("--beta", type=float, required=False, default=5)
-    parser.add_argument("--dim", type=int, required=False, default=3)
+    parser.add_argument("--dim", type=int, required=False, default=64)
     parser.add_argument('--dataset', type=str, required=True, default="noacc",
                         help='Use the models trained on dataset "acc" or "noacc"')
     args = parser.parse_args()
@@ -199,9 +199,9 @@ if __name__=="__main__":
     print("Start anomaly detection")
 
     # Getting the model's path
-    model_VAE_path = f"saved_models_2D/dataset_{args.dataset}/best_patch_fold_CVAE2D_{latent_dimension}_{beta}_100_20.pth"
-    model_LVAE_path = f"saved_models_2D/dataset_{args.dataset}/best_patch_fold_CVAE2D_{latent_dimension}_{beta}_100_20.pth2"
-    longitudinal_saving_path = f"saved_models_2D/dataset_{args.dataset}/best_patch_fold_longitudinal_estimator_params_CVAE2D_{latent_dimension}_{beta}_100_20.json2"
+    model_VAE_path = f"saved_models_2D/dataset_{args.dataset}/best_patch_fold_CVAE2D_{latent_dimension}_{beta}_100_5.pth"
+    model_LVAE_path = f"saved_models_2D/dataset_{args.dataset}/best_patch_fold_CVAE2D_{latent_dimension}_{beta}_100_5.pth2"
+    longitudinal_saving_path = f"saved_models_2D/dataset_{args.dataset}/best_patch_fold_longitudinal_estimator_params_CVAE2D_{latent_dimension}_{beta}_100_5.json2"
   
     # Loading VAE model
     model_VAE = CVAE2D_PATCH(latent_dimension)

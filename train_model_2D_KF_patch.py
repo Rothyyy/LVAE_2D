@@ -156,7 +156,7 @@ best_loss, lvae_losses = train_kfold(CVAE2D_PATCH, path_best_fold_model, folds_i
                                      loss_graph_saving_path=f"{output_path}/loss_longitudinal_only", previous_best_loss=best_loss,
                                      spatial_loss=loss_function, batch_size=batch_size, num_workers=num_worker, train_patch=True)
 
-best_fold_LVAE = CV_LVAE(CVAE2D_PATCH, folds_index, test_df, nn_saving_path, longitudinal_saving_path, temp_args.dataset, plot_save_path=output_path, cv_patch=True)
+best_fold_LVAE = CV_LVAE(CVAE2D_PATCH, folds_index, test_df, nn_saving_path, longitudinal_saving_path, temp_args.dataset, latent_dimension=latent_representation_size, plot_save_path=output_path, cv_patch=True)
 
 
 save_best_fold_path_VAE = f"saved_models_2D/dataset_{temp_args.dataset}/{freeze_path}/best_patch_{freeze_path}_fold_CVAE2D_{args.dimension}_{args.beta}_{args.gamma}_{args.iterations}.pth"

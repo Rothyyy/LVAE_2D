@@ -151,6 +151,7 @@ def compute_trajectory_threshold(encodings_array, ages_array, with_ages=True):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
+    parser.add_argument("--dim", type=int, required=False, default=4)
     parser.add_argument("--beta", type=float, required=False, default=5)
     parser.add_argument("-kf", type=str, required=False, default="y")
     parser.add_argument('-f', '--freeze', type=str, required=True, default='y',
@@ -163,6 +164,7 @@ if __name__ == "__main__":
 
     dataset_name = args.dataset
     device = "cuda" if torch.cuda.is_available() else "cpu"
+    latent_dim = args.dim
     consider_age = True if args.age=="y" else False
 
     if args.freeze == "y":
@@ -173,12 +175,12 @@ if __name__ == "__main__":
         freeze_path = "no_freeze"
 
     if args.kf == "y" or args.kf == "yy":
-        VAE_model_path = f"saved_models_2D/dataset_{args.dataset}/best_fold_CVAE2D_4_5_100_200.pth"
-        LVAE_model_path = f"saved_models_2D/dataset_{dataset_name}/{freeze_path}/best_{freeze_path}_fold_CVAE2D_4_5_100_200.pth2"
-        LVAE_estimator_path = f"saved_models_2D/dataset_{dataset_name}/{freeze_path}/best_{freeze_path}_fold_longitudinal_estimator_params_CVAE2D_4_5_100_200.json2"
+        VAE_model_path = f"saved_models_2D/dataset_{args.dataset}/best_fold_CVAE2D_{latent_dim}_5_100_200.pth"
+        LVAE_model_path = f"saved_models_2D/dataset_{dataset_name}/{freeze_path}/best_{freeze_path}_fold_CVAE2D_{latent_dim}_5_100_200.pth2"
+        LVAE_estimator_path = f"saved_models_2D/dataset_{dataset_name}/{freeze_path}/best_{freeze_path}_fold_longitudinal_estimator_params_CVAE2D_{latent_dim}_5_100_200.json2"
     else:
-        LVAE_model_path = f"saved_models_2D/dataset_{dataset_name}/{freeze_path}/CVAE2D_4_5_100_200.pth2"
-        LVAE_estimator_path = f"saved_models_2D/dataset_{dataset_name}/{freeze_path}/longitudinal_estimator_params_CVAE2D_4_5_100_200.json2"
+        LVAE_model_path = f"saved_models_2D/dataset_{dataset_name}/{freeze_path}/CVAE2D_{latent_dim}_5_100_200.pth2"
+        LVAE_estimator_path = f"saved_models_2D/dataset_{dataset_name}/{freeze_path}/longitudinal_estimator_params_CVAE2D_{latent_dim}_5_100_200.json2"
 
     data_csv_path = "data_csv/starmen_test_set.csv"
     dataset_test = LongitudinalDataset2D(data_csv_path)

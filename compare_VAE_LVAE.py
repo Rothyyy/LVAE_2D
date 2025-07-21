@@ -109,6 +109,7 @@ def plot_comparison(original_image, reconstructed_image_VAE, reconstructed_image
 if __name__=="__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("-a", "--anomaly", type=str, required=False, default="original")
+    parser.add_argument("--dim", type=int, required=False, default=4)
     parser.add_argument("--beta", type=float, required=False, default=5)
     parser.add_argument("-n", type=int, required=False, default=3)
     parser.add_argument("-kf", type=str, required=False, default="y")
@@ -134,7 +135,7 @@ if __name__=="__main__":
 
     # Setting some parameters
     beta = args.beta
-    latent_dimension = 4
+    latent_dimension = args.dim
     num_workers = round(os.cpu_count()/6)
     device = "cuda" if torch.cuda.is_available() else "cpu"
 
@@ -148,14 +149,14 @@ if __name__=="__main__":
     ######## Loading the models ########
 
     if args.kf == "y" or args.kf == "yy":
-        model_VAE_path = f"saved_models_2D/dataset_{args.dataset}/best_fold_CVAE2D_4_{beta}_100_200.pth"
-        model_LVAE_path = f"saved_models_2D/dataset_{args.dataset}/{freeze_path}/best_{freeze_path}_fold_CVAE2D_4_{beta}_100_200.pth2"
-        longitudinal_saving_path = f"saved_models_2D/dataset_{args.dataset}/{freeze_path}/best_{freeze_path}_fold_longitudinal_estimator_params_CVAE2D_4_{beta}_100_200.json2"
+        model_VAE_path = f"saved_models_2D/dataset_{args.dataset}/best_fold_CVAE2D_{latent_dimension}_{beta}_100_200.pth"
+        model_LVAE_path = f"saved_models_2D/dataset_{args.dataset}/{freeze_path}/best_{freeze_path}_fold_CVAE2D_{latent_dimension}_{beta}_100_200.pth2"
+        longitudinal_saving_path = f"saved_models_2D/dataset_{args.dataset}/{freeze_path}/best_{freeze_path}_fold_longitudinal_estimator_params_CVAE2D_{latent_dimension}_{beta}_100_200.json2"
 
     else:
-        model_VAE_path = f"saved_models_2D/dataset_{args.dataset}/{freeze_path}/CVAE2D_4_{beta}_100_200.pth"
-        model_LVAE_path = f"saved_models_2D/dataset_{args.dataset}/{freeze_path}/CVAE2D_4_{beta}_100_200.pth2"
-        longitudinal_saving_path = f"saved_models_2D/dataset_{args.dataset}/{freeze_path}/longitudinal_estimator_params_CVAE2D_4_{beta}_100_200.json2"
+        model_VAE_path = f"saved_models_2D/dataset_{args.dataset}/{freeze_path}/CVAE2D_{latent_dimension}_{beta}_100_200.pth"
+        model_LVAE_path = f"saved_models_2D/dataset_{args.dataset}/{freeze_path}/CVAE2D_{latent_dimension}_{beta}_100_200.pth2"
+        longitudinal_saving_path = f"saved_models_2D/dataset_{args.dataset}/{freeze_path}/longitudinal_estimator_params_CVAE2D_{latent_dimension}_{beta}_100_200.json2"
 
     # Loading VAE model
     model_VAE = CVAE2D_ORIGINAL(latent_dimension)

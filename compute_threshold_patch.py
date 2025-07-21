@@ -143,6 +143,7 @@ if __name__ == "__main__":
     parser.add_argument("--dim", type=int, required=False, default=32)
     parser.add_argument("--beta", type=float, required=False, default=5)
     parser.add_argument("--gamma", type=float, required=False, default=100)
+    parser.add_argument("--iter", type=int, required=False, default=5)
     parser.add_argument("--size", type=int, required=False, default=15)
     parser.add_argument('--dataset', type=str, required=True, default="noacc",
                         help='Use the models trained on dataset "acc" or "noacc"')
@@ -175,15 +176,16 @@ if __name__ == "__main__":
     # Setting some parameters
     patch_size = args.size
     latent_dimension = args.dim
+    train_iter = args.iter
     beta = args.beta
     gamma = args.gamma
     num_worker = round(os.cpu_count()/6)
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
     # Getting the path to the saved models
-    VAE_nn_saving_path = f"saved_models_2D/dataset_{dataset_name}/best_patch_fold_CVAE2D_{latent_dimension}_{beta}_{gamma}_5.pth"
-    LVAE_nn_saving_path = f"saved_models_2D/dataset_{dataset_name}/best_patch_fold_CVAE2D_{latent_dimension}_{beta}_{gamma}_20.pth2"
-    longitudinal_saving_path = f"saved_models_2D/dataset_{dataset_name}/best_patch_fold_longitudinal_estimator_params_CVAE2D_{latent_dimension}_{beta}_{gamma}_20.json2"
+    VAE_nn_saving_path = f"saved_models_2D/dataset_{dataset_name}/best_patch_fold_CVAE2D_{latent_dimension}_{beta}_{gamma}_{train_iter}.pth"
+    LVAE_nn_saving_path = f"saved_models_2D/dataset_{dataset_name}/best_patch_fold_CVAE2D_{latent_dimension}_{beta}_{gamma}_{train_iter}.pth2"
+    longitudinal_saving_path = f"saved_models_2D/dataset_{dataset_name}/best_patch_fold_longitudinal_estimator_params_CVAE2D_{latent_dimension}_{beta}_{gamma}_{train_iter}.json2"
 
 
     ##### LAUNCHING COMPUTATION FOR VAE #####
