@@ -109,8 +109,8 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--method", type=str, required=False, default="image")
     parser.add_argument("-set", type=str, required=False, default="test")
-    parser.add_argument("--dim", type=int, required=False, default=32)
-    parser.add_argument("--beta", type=float, required=False, default=5)
+    parser.add_argument("--dim", type=int, required=False, default=64)
+    parser.add_argument("--beta", type=float, required=False, default=2)
     parser.add_argument("--gamma", type=float, required=False, default=100)
     parser.add_argument("--iter", type=int, required=False, default=5)
     parser.add_argument("--size", type=int, required=False, default=15)
@@ -252,5 +252,5 @@ if __name__ == "__main__":
     with open('data_csv/VAE_patch_losses.json', 'w') as f:
         json.dump(all_losses, f)
 
-    with open(f'data_csv/anomaly_threshold_patch_{method}.json', 'w') as f:
+    with open(f'data_csv/threshold_json/anomaly_threshold_patch_{method}_{latent_dimension}_{beta}.json', 'w') as f:
         json.dump(stats_dict, f, ensure_ascii=False)

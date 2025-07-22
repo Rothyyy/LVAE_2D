@@ -70,9 +70,16 @@ def plot_anomaly_figure(original_image, reconstructed_image_VAE, reconstructed_i
     f, axarr = plt.subplots(4, 10, figsize=(fig_width, fig_height))
     for i in range(original_image.shape[0]):
         axarr[0, i].imshow(original_image[i, 0 , :, :], cmap="gray")
+        axarr[0, i].axis('off')
+
         axarr[1, i].imshow(reconstructed_image_VAE[i, 0, :, :], cmap="gray")
+        axarr[1, i].axis('off')
+
         axarr[2, i].imshow(reconstructed_image_LVAE[i, 0, :, :], cmap="gray")
+        axarr[2, i].axis('off')
+
         axarr[3, i].imshow(binary_overlay[i])
+        axarr[3, i].axis('off')
 
         if method=="image":
             axarr[0, i].set_title(f"VAE={detection_vector_VAE[i]}, LVAE={detection_vector_LVAE[i]}", fontsize=50)
@@ -94,6 +101,51 @@ def plot_anomaly_figure(original_image, reconstructed_image_VAE, reconstructed_i
         f.suptitle(f'Individual id = {id}, method = {method}, (model = True => Anomaly detected, else False)', fontsize=80)
     else:
         f.suptitle(f'Individual id = {id}, method = {method}, (model = x = # anomalous pixel)', fontsize=80)
+    plt.tight_layout()
+    plt.savefig(save_path)
+    plt.close(f)
+    return 
+
+
+def plot_anomaly_figure_patch(original_image, reconstructed_image_VAE, anomaly_map_VAE,
+                                id, anomaly_type):
+    """
+    We enter this function when an anomaly is detected.
+    The function will plot the image and save it in a pdf file.
+    """
+    os.makedirs(f"plots/fig_anomaly_reconstruction/{anomaly_type}", exist_ok=True)
+    save_path = f"plots/fig_anomaly_reconstruction/{anomaly_type}/AD_subject_{id}.pdf"
+
+    # Compute the residual and binary mask
+    fig_width = original_image.shape[0] * 10
+    fig_height = 50  # Adjust as needed
+
+    # To get RGB output in the anomaly map
+    binary_overlay = np.zeros((10,64,64,3))
+    binary_overlay[:,:,:, 2] = anomaly_map_VAE
+    f, axarr = plt.subplots(3, 10, figsize=(fig_width, fig_height))
+    for i in range(original_image.shape[0]):
+        axarr[0, i].imshow(original_image[i,:, :], cmap="gray")
+        axarr[0, i].axis('off')
+
+        axarr[1, i].imshow(reconstructed_image_VAE[i, :, :], cmap="gray")
+        axarr[1, i].axis('off')
+
+        axarr[2, i].imshow(binary_overlay[i, :, :])
+        axarr[2, i].axis('off')
+
+    # Row labels
+    row_labels = ["Input", "VAE", "Anomalies"]
+    for row in range(3):
+        # Add label to the first column of each row, closer and vertically centered
+        axarr[row, 0].annotate(row_labels[row],
+                            xy=(-0.1, 0.5),  # Slightly to the left, centered vertically
+                            xycoords='axes fraction',
+                            ha='right',
+                            va='center',
+                            fontsize=60)
+
+    f.suptitle(f'Individual id = {id}', fontsize=80)
     plt.tight_layout()
     plt.savefig(save_path)
     plt.close(f)

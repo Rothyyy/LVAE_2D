@@ -22,7 +22,7 @@ from utils.display_individual_observations_2D import display_individual_observat
 from utils.loading_image import open_npy
 from dataset.LongitudinalDataset2D_patch import LongitudinalDataset2D_patch, longitudinal_collate_2D_patch
 from nnModels.train_AE import train_AE_kfold
-from cross_validation import CV_VAE, CV_LVAE
+from train.cross_validation import CV_VAE, CV_LVAE
 """
 Script to train the full model. Neural network model + longitudinal estimator
 """

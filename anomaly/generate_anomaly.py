@@ -3,6 +3,9 @@ import numpy as np
 import matplotlib.pyplot as plt
 import argparse
 import pandas as pd
+import os
+
+from dataset.patch_to_csv import extract_centered_patches
 
 
 # Drawing circles on some specific part of the image (left part of the starman, center of the starman)
@@ -39,9 +42,12 @@ if __name__ == "__main__":
         random_subject = np.random.choice(1000, size=n_sample, replace=False)
     
     get_patch = args.patch
+    os.makedirs("data_starmen/anomaly_patches", exist_ok=True)
     patch_size = args.size
+    num_patch = (64 - (patch_size//2 * 2)) * (64 - (patch_size//2 * 2))     # Number of patches per image
 
-    data = []
+    data_image = []
+    data_patches = []
     f = open("data_starmen/path_to_visit_ages_file.txt", "r")
     ages_list = f.read().split()
 
@@ -86,29 +92,37 @@ if __name__ == "__main__":
                            max(0, 200-20*round(ages[t]-ages[0])))), 2)
 
             # Create the data that will be used for anomaly detection
-
+            row = {
+                "age": ages[t] , 
+                "image_path": f"./data_starmen/anomaly_images/{anomaly_image_name}" ,
+                "subject_id": str(subject + 1000)   # subject + 1000 to simulate new patient
+            }
+            data_image.append(row)
 
             if get_patch:
+                patches, _ = extract_centered_patches(image_uint8.astype(np.float64), patch_size=patch_size)
+                patch_id = (subject) * 2500 
+                f"{anomaly}__starman__subject_s{subject}__tp_{t}.npy"
+                np.save(f"./data_starmen/anomaly_patches/{anomaly}__starman__subject_s{subject}__tp_{t}_patches.npy", patches)
                 row = {
-                    "age": ages[t] , 
-                    "image_path": f"./data_starmen/anomaly_images/{anomaly_image_name}" ,
-                    "subject_id": str(subject)
+                    "subject_id": str(subject),  # subject + 1000 to simulate new patient
+                    "patch_id_min": patch_id,
+                    "patch_id_max": patch_id + num_patch - 1,
+                    "age": ages[t],
+                    "patch_path": f"./data_starmen/anomaly_patches/{anomaly}__starman__subject_s{subject}__tp_{t}_patches.npy" ,
                 }
-                data.append(row)
+                data_patches.append(row)
 
-            else:
-                row = {
-                    "age": ages[t] , 
-                    "image_path": f"./data_starmen/anomaly_images/{anomaly_image_name}" ,
-                    "subject_id": str(subject)
-                }
-                data.append(row)
 
             # Saving the image in npy format
             image = image_uint8.astype(np.float64) / 255
             np.save(save_path, image)
 
     # Saving the data in csv file
-    data_df = pd.DataFrame(data)
-    data_df.to_csv(f"data_csv/anomaly_{anomaly}_starmen_dataset.csv")
+    data_df_image = pd.DataFrame(data_image)
+    data_df_image.to_csv(f"data_csv/anomaly_{anomaly}_starmen_dataset.csv")
+
+    if get_patch:
+        data_df_patch = pd.DataFrame(data_patches)
+        data_df_patch.to_csv(f"data_csv/anomaly_{anomaly}_starmen_dataset_patch.csv")
 

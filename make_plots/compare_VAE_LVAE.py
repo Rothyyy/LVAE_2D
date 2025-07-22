@@ -30,8 +30,8 @@ def plot_comparison(original_image, reconstructed_image_VAE, reconstructed_image
     We enter this function when an anomaly is detected.
     The function will plot the image and save it in a pdf file.
     """
-    save_path = f"results_reconstruction/{anomaly_type}_model_comparison/compare_subject_{id}"
-    os.makedirs(f"results_reconstruction/{anomaly_type}_model_comparison", exist_ok=True)
+    save_path = f"plots/comparison_fig/{anomaly_type}_model_comparison/compare_subject_{id}"
+    os.makedirs(f"plots/comparison_fig/{anomaly_type}_model_comparison", exist_ok=True)
     # Compute the residual and binary mask
 
     mask_threshold = 0.15
@@ -54,13 +54,20 @@ def plot_comparison(original_image, reconstructed_image_VAE, reconstructed_image
     fig, axarr = plt.subplots(4, 10, figsize=(fig_width, fig_height), sharex=True)
     for i in range(original_image.shape[0]):
         axarr[0, i].imshow(original_image[i, 0 , :, :], cmap="gray")
+        axarr[0, i].axis('off')
+        
         axarr[1, i].imshow(reconstructed_image_VAE[i, 0, :, :], cmap="gray")
+        axarr[1, i].axis('off')
+        
         axarr[2, i].imshow(reconstructed_image_LVAE[i, 0, :, :], cmap="gray")
+        axarr[2, i].axis('off')
+        
         # axarr[3, i].imshow(binary_mask[i, 0, :, :], cmap="gray")
         axarr[3, i].imshow(binary_overlay[i])
         # axarr[3, i].imshow(binary_input_VAE[i, 0, :, :], cmap=blue_cmap)
         # axarr[3, i].imshow(binary_input_LVAE[i, 0, :, :], cmap=red_cmap)
- 
+        axarr[3, i].axis('off')
+
     # Row labels
     row_labels = ["Input", "VAE", "LVAE", "Residual \n input - model"]
     for row in range(4):

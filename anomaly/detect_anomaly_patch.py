@@ -15,20 +15,49 @@ from longitudinalModel.fit_longitudinal_estimator_on_nn import fit_longitudinal_
 from dataset.group_based_train_test_split import group_based_train_test_split
 
 from nnModels.CVAE2D_PATCH import CVAE2D_PATCH
-from nnModels.losses import image_reconstruction_error, pixel_reconstruction_error
+from nnModels.losses import image_reconstruction_error_patch, pixel_reconstruction_error
 
 from utils.display_individual_observations_2D import project_encodings_for_results
 from utils.loading_image import open_npy
 from dataset.LongitudinalDataset2D_patch import LongitudinalDataset2D_patch, longitudinal_collate_2D_patch
-from plot_anomaly import plot_anomaly_bar, plot_anomaly_figure
+from .plot_anomaly import plot_anomaly_bar, plot_anomaly_figure_patch
+from utils.patch_to_image import pad_array, pixel_counting, patch_to_image
+
+
+
+def compute_pixel_ano_score(patch_loss):
+
+    # This array is used to store the anomaly score of one pixel (anomaly score to choose)
+    pixel_anomaly_score = np.zeros((64,64))
+
+    # This array was obtained previously after putting the image in the model and getting the loss/anomaly score
+    if patch_loss.shape != (64,64):
+        patch_loss = np.array(patch_loss).reshape((50,50))
+        patch_loss = pad_array(patch_loss)
+
+
+    for i in range(64):
+        for j in range(64):
+            # Build the window to get all the anomaly patches
+            top = max(i - 15//2, 0)
+            bottom = min(i + 15//2 + 1, 64)
+            left = max(j - 15//2, 0)
+            right = min(j + 15//2 + 1, 64)
+
+            pixel_anomaly_score[i,j] += np.sum(patch_loss[top:bottom , left:right])     # Just compute sum
+            pixel_anomaly_score[i,j] += np.sum(patch_loss[top:bottom , left:right])/pixel_counting[i,j]     # With mean
+             
+    return pixel_anomaly_score
+
+
 
 
 if __name__=="__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("-a", "--anomaly", type=str, required=False, default="growing_circle")
-    parser.add_argument("--method", type=str, required=False, default="pixel")
+    parser.add_argument("--method", type=str, required=False, default="image")
     parser.add_argument("-n", type=int, required=False, default=5)
-    parser.add_argument("--beta", type=float, required=False, default=5)
+    parser.add_argument("--beta", type=float, required=False, default=2)
     parser.add_argument("--gamma", type=float, required=False, default=100)
     parser.add_argument("--iterations", type=int, required=False, default=5)
     parser.add_argument("--dim", type=int, required=False, default=64)
@@ -45,12 +74,9 @@ if __name__=="__main__":
     if method not in ["image", "pixel", "pixel_all"]:
         print("Error, anomaly not found, select one of the following anomaly : 'image', 'pixel', 'pixel_all' ")
         exit()
-    if method == "image":
-        loss_function = image_reconstruction_error
-        size_anomaly = (10, 1)
-    else:
-        loss_function = pixel_reconstruction_error
-        size_anomaly = (10, 64*64) if method == "pixel" else (10, 64, 64)
+    loss_function = image_reconstruction_error_patch
+    # if method == "image":
+    #     size_anomaly = (10, 1)
 
 
     # Setting some parameters
@@ -65,19 +91,19 @@ if __name__=="__main__":
     device = "cuda" if torch.cuda.is_available() else "cpu"
 
     # Path to dataset and treshold
-    anomaly_dataset_path = f"data_csv/anomaly_{anomaly}_starmen_dataset.csv"
-    threshold_path = f"data_csv/threshold_json/anomaly_threshold_{method}_{latent_dimension}_{beta}.json"
+    anomaly_dataset_path = f"data_csv/anomaly_{anomaly}_starmen_dataset_patch.csv"
+    threshold_path = f"data_csv/threshold_json/anomaly_threshold_patch_{method}_{latent_dimension}_{beta}.json"
     with open(threshold_path) as json_file:
         threshold_dict = json.load(json_file)
 
-
+    
 
     ######## TEST WITH VAE ########
     print("Start anomaly detection")
 
     # Getting the model's path
     model_VAE_path = f"saved_models_2D/best_patch_fold_CVAE2D_{latent_dimension}_{beta}.pth"
-    model_LVAE_path = f"saved_models_2D/dataset_{args.dataset}/best_patch_fold_CVAE2D_{latent_dimension}_{beta}_{gamma}_{iterations}.pth2"
+    model_LVAE_path = f"saved_models_2D/best_patch_fold_CVAE2D_{latent_dimension}_{beta}_{gamma}_{iterations}.pth2"
     longitudinal_saving_path = f"saved_models_2D/best_patch_fold_longitudinal_estimator_params_CVAE2D_{latent_dimension}_{beta}_{gamma}_{iterations}.json2"
   
     # Loading VAE model
@@ -98,10 +124,6 @@ if __name__=="__main__":
     # model_LVAE.to(device)
     # longitudinal_estimator = Leaspy.load(longitudinal_saving_path)
 
-    # Loading thresholds and dataset
-    # dataset = Dataset2D(anomaly_dataset_path)
-    # dataset = Dataset2D_VAE_AD(anomaly_dataset_path)
-    # data_loader = DataLoader(dataset, batch_size=10, num_workers=num_workers, pin_memory=True, shuffle=False)
 
     # Loading anomaly dataset and thresholds
     transformations = transforms.Compose([])
@@ -111,15 +133,8 @@ if __name__=="__main__":
     VAE_threshold_95 = threshold_dict["VAE_threshold_95"]
     VAE_threshold_99 = threshold_dict["VAE_threshold_99"]
 
-    if method == "pixel_all":
-        VAE_threshold_95 = torch.tensor(VAE_threshold_95)
-        VAE_threshold_99 = torch.tensor(VAE_threshold_99)
-
     # LVAE_threshold_95 = threshold_dict["VAE_threshold_95"]
     # LVAE_threshold_99 = threshold_dict["VAE_threshold_99"]
-    # if method == "pixel_all":
-    #     LVAE_threshold_95 = torch.tensor(LVAE_threshold_95)
-    #     LVAE_threshold_99 = torch.tensor(LVAE_threshold_99)
 
 
     # These variables will count the total number of anomalous images/pixel detected 
@@ -130,80 +145,88 @@ if __name__=="__main__":
 
     with torch.no_grad():
         # This variable will store how many times a image/pixel will be considered as anomalous
-        total_detection_anomaly_VAE = torch.zeros(size_anomaly).to(device)
-        total_detection_anomaly_LVAE = torch.zeros(size_anomaly).to(device)
+        # total_detection_anomaly_VAE = torch.zeros(size_anomaly).to(device)
+        # total_detection_anomaly_LVAE = torch.zeros(size_anomaly).to(device)
         
         for data in data_loader:
-            images = data[0]
-            images = images.to(device)
+
+            # With batch size = 1, patches contains the patches of the 10 images of 1 patient
+            patches = data[0]   # shape = [25000, 1, 15, 15]
+            patches = patches.to(device)
             id = data[2][0]
 
-            pixel_errors_VAE = torch.zeros(size_anomaly).to(device) if method != "image" else None
-            # pixel_errors_LVAE = torch.zeros(size_anomaly).to(device) if method != "image" else None
-
-            # These vectors of boolean will be used for the plot
-            anomaly_detected_vector_VAE = torch.zeros(10, dtype=bool).to(device)   
-            anomaly_detected_vector_LVAE = torch.zeros(10, dtype=bool).to(device)  # This vector of boolean will be used for the plot
+            # pixel_errors_VAE = torch.zeros(size_anomaly).to(device) 
+            # pixel_errors_LVAE = torch.zeros(size_anomaly).to(device)
             
             # VAE and LVAE image reconstruction
-            mu_VAE, logvar_VAE, recon_images_VAE, _ = model_VAE(images)    # mu.shape = (10,4)
-            # mus_LVAE, logvars_LVAE, recon_images_LVAE = get_longitudinal_images(data, model_LVAE, longitudinal_estimator)
+            _, _, recon_patches_VAE, _ = model_VAE(patches)   # shape = [25000, 1, 15, 15]
+            # _, _, recon_images_LVAE = get_longitudinal_images(data, model_LVAE, longitudinal_estimator)
+
+
+            # Reshape the patches into shape = [10, 2500, 1, 15, 15]
+            patches = patches.reshape((10, 2500, 1, 15, 15))
+            recon_patches_VAE = recon_patches_VAE.reshape((10, 2500, 15, 15))
+
+            # TODO: It would be faster to simply load the image from the right folders => Have to write the right paths
+            image_array_original = np.zeros((10,64,64))  # Array to store image to plot
+            image_array_reconstructed = np.zeros((10,64,64))  # Array to store image to plot
+            anomaly_map = np.zeros((10, 64, 64), dtype=bool)
 
             # For each image of a subject, compute the error and compare with threshold
-            for i in range(10):
+            for t in range(10):
+                # List containing the anomaly score of all patches of an image
 
-                # Compute VAE's reconstruction error
-                reconstruction_error_VAE = loss_function(recon_images_VAE[i, 0], images[i, 0], method)
+                ###### Compute VAE's reconstruction error
+                anomaly_score_array = loss_function(recon_patches_VAE[t], patches[t]).numpy().reshape((50,50))  # shape = [50, 50]
+                anomaly_score_array = pad_array(anomaly_score_array)    # shape = [64, 64]
+                pixel_score = compute_pixel_ano_score(anomaly_score_array)      # shape = [64, 64]
+
+                image_array_original[t] = patch_to_image(patches[t, :, 0].numpy())
+                image_array_reconstructed[t] = patch_to_image(recon_patches_VAE[t,: , 0].numpy())
+
+                anomaly_map[t] = pixel_score > VAE_threshold_99   #  !!! Here to change which threshold to use
+                # total_detection_anomaly_VAE[t] += np.sum(anomaly_map[t])
+
+
+                ###### Compute LVAE's reconstruction error
                 
-                compare_to_threshold = reconstruction_error_VAE > VAE_threshold_99   #  !!! Here to change which threshold to use
-                anomaly_detected_vector_VAE[i] += (compare_to_threshold).any()
-                total_detection_anomaly_VAE[i] += compare_to_threshold
-
-                if method != "image":
-                    pixel_errors_VAE[i] = compare_to_threshold 
-
-                VAE_anomaly_detected_95 += torch.sum(reconstruction_error_VAE > VAE_threshold_95).detach().cpu().item()
-                VAE_anomaly_detected_99 += torch.sum(reconstruction_error_VAE > VAE_threshold_99).detach().cpu().item()
-
-                # Compute LVAE's reconstruction error
-                # reconstruction_error = loss_function(recon_images_LVAE[i, 0], images[i, 0], method)
+                # reconstruction_error = loss_function(recon_images_LVAE[t, 0], images[t, 0], method)
                 
                 # compare_to_threshold = reconstruction_error > VAE_threshold_99   # Here to change with threshold to use
-                # anomaly_detected_vector_LVAE[i] += (compare_to_threshold).any()
-                # total_detection_anomaly_LVAE[i] += compare_to_threshold
+                # anomaly_detected_vector_LVAE[t] += (compare_to_threshold).any()
+                # total_detection_anomaly_LVAE[t] += compare_to_threshold
                 # if method != "image":
-                #     pixel_errors_LVAE[i] = compare_to_threshold 
+                #     pixel_errors_LVAE[t] = compare_to_threshold 
 
                 # LVAE_anomaly_detected_95 += torch.sum(reconstruction_error > LVAE_threshold_95).detach().cpu().item()
                 # LVAE_anomaly_detected_99 += torch.sum(reconstruction_error > LVAE_threshold_99).detach().cpu().item()
 
             # For a subject, plot the anomalous image, the reconstructed image and the residual
-            # plot_anomaly(images, recon_images_VAE, recon_images_LVAE,
-            #               id, anomaly, method,
-            #               anomaly_detected_vector_VAE, anomaly_detected_vector_LVAE, 
-            #               pixel_errors_VAE, pixel_errors_LVAE)
+            plot_anomaly_figure_patch(image_array_original, image_array_reconstructed, anomaly_map, id, anomaly)
+            exit()
 
-    if method == "image":   # pixel or pixel_all would have too many bar to plot making it unreadable
-        plot_anomaly_bar(total_detection_anomaly_VAE.flatten(), "VAE", anomaly, method, num_images)
-        # plot_anomaly_bar(total_detection_anomaly_LVAE.flatten(), "LVAE", anomaly, method, num_images)
 
-    if method == "pixel":
-        total_detection_anomaly_VAE = torch.sum(total_detection_anomaly_VAE.detach().cpu(), dim=1).tolist()
-        # total_detection_anomaly_LVAE = torch.sum(total_detection_anomaly_LVAE.detach().cpu(), dim=1).tolist()
-        anomaly_dict_pixel = {}
-        anomaly_dict_pixel["VAE_pixel_anomaly_99"] = total_detection_anomaly_VAE
-        # anomaly_dict_pixel["LVAE_pixel_anomaly_99"] = total_detection_anomaly_LVAE
-        with open(f'./results_pixel_AD_{anomaly}.json', 'w') as f:
-            json.dump(anomaly_dict_pixel, f, ensure_ascii=False)
+        # if method == "image":   # pixel or pixel_all would have too many bar to plot making it unreadable
+            # plot_anomaly_bar(total_detection_anomaly_VAE.flatten(), "VAE", anomaly, method, num_images)
+            # plot_anomaly_bar(total_detection_anomaly_LVAE.flatten(), "LVAE", anomaly, method, num_images)
+
+    # if method == "pixel":
+    #     total_detection_anomaly_VAE = torch.sum(total_detection_anomaly_VAE.detach().cpu(), dim=1).tolist()
+    #     # total_detection_anomaly_LVAE = torch.sum(total_detection_anomaly_LVAE.detach().cpu(), dim=1).tolist()
+    #     anomaly_dict_pixel = {}
+    #     anomaly_dict_pixel["VAE_pixel_anomaly_99"] = total_detection_anomaly_VAE
+    #     # anomaly_dict_pixel["LVAE_pixel_anomaly_99"] = total_detection_anomaly_LVAE
+    #     with open(f'./results_pixel_AD_{anomaly}.json', 'w') as f:
+    #         json.dump(anomaly_dict_pixel, f, ensure_ascii=False)
 
 
     ######## PRINTING SOME RESULTS ########
 
-    print()
-    print(f"Using method {method} with VAE and {num_images} images:")
-    print(f"With threshold_95 we detect {VAE_anomaly_detected_95} anomaly.")
-    print(f"With threshold_99 we detect {VAE_anomaly_detected_99} anomaly.")
-    print()
+    # print()
+    # print(f"Using method {method} with VAE and {num_images} images:")
+    # print(f"With threshold_95 we detect {VAE_anomaly_detected_95} anomaly.")
+    # print(f"With threshold_99 we detect {VAE_anomaly_detected_99} anomaly.")
+    # print()
 
     # print(f"Using method {method} with LVAE and {num_images} images:")
     # print(f"With threshold_95 we detect {LVAE_anomaly_detected_95} anomaly.")
