@@ -48,8 +48,8 @@ def fit_longitudinal_estimator_on_nn(data_loader, model, device, longitudinal_es
 
 
 def fit_longitudinal_estimator_on_nn_patch(data_loader, model, device, longitudinal_estimator,
-                                     longitudinal_estimator_settings, patch_size=15):
-    num_patch_per_image = 2500  # (64-14)*(64-14) = 50*50 = 2500
+                                           longitudinal_estimator_settings, patch_size=15):
+    num_patch_per_image = 2500  # (64-patch_size//2)*(64-patch_size//2) = 50*50 = 2500
     with torch.no_grad():
         encodings = []
         times = []

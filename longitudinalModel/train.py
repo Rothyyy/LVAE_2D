@@ -317,11 +317,6 @@ def train_kfold_patch(model_type, path_best_fold_model, k_folds_index_list,
         model.device = device
         model.to(device)
 
-        # if freeze == "freeze_conv":
-        #     model.freeze_conv()
-        # if freeze == "freeze_all":
-        #     model.freeze_all()
-
         longitudinal_estimator = Leaspy("linear", noise_model="gaussian_diagonal", source_dimension=latent_dimension - 1)
 
         best_loss = previous_best_loss

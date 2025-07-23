@@ -11,7 +11,7 @@ import os
 from dataset.Dataset2D import Dataset2D_patch
 from longitudinalModel.fit_longitudinal_estimator_on_nn import fit_longitudinal_estimator_on_nn
 # from nnModels.CVAE2D import CVAE2D
-from longitudinalModel.train import train, train_kfold
+from longitudinalModel.train import train, train_kfold_patch
 from dataset.group_based_train_test_split import group_based_train_test_split
 from dataset.split_k_folds import train_k_folds_split_patch
 
@@ -117,7 +117,7 @@ os.makedirs(os.path.dirname(longitudinal_saving_path), exist_ok=True)
 
 best_loss = 1e15
 
-best_loss, lvae_losses = train_kfold(CVAE2D_PATCH, path_best_fold_model, folds_index, algo_settings, 
+best_loss, lvae_losses = train_kfold_patch(CVAE2D_PATCH, path_best_fold_model, folds_index, algo_settings, 
                                      nb_epochs=100, lr=initial_lr, latent_dimension=latent_representation_size,
                                      nn_saving_path=LVAE_saving_path, longitudinal_saving_path=longitudinal_saving_path,
                                      loss_graph_saving_path=f"{output_path}/loss_longitudinal_only", previous_best_loss=best_loss,
