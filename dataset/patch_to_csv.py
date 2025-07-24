@@ -79,27 +79,43 @@ if __name__=="__main__":
     # Process data to get a csv file 
     data = []
     patch_id = 0
+    black_patch_threshold = np.ones((patch_size, patch_size)) * 1e-6
+
     for patient_id in range(1000):  # For every subject
+
         print("Patient :", patient_id)
+        image_patches = np.zeros((10, num_patch, patch_size, patch_size))
+        not_black_patch_indices = np.zeros((10, num_patch), dtype=bool)
+
         for t in range(10):     # For every timestamp
             
             # Load image and get all patches
             path_image = f"./data_starmen/images/SimulatedData__Reconstruction__starman__subject_s{patient_id}__tp_{t}.npy"
             image = np.load(path_image) 
             patches, centers = extract_centered_patches(image, patch_size)
+
+            # Store patches and check if patch are black or not
+            image_patches[t] = patches
+            not_black_patch_indices[t] = (patches > black_patch_threshold).any(axis=(1,2))
+            # TODO: Instead of accepting patch with at least 1 not black pixel, accept patch with at least x% of not white pixel ?
+
+        not_black_patch_indices = np.where(not_black_patch_indices.any(0))[0]
+        num_not_black_patch = not_black_patch_indices.shape[0]
+
+        # TODO: Probably better way to do this than 2 for loops
+        for t in range(10):        
             # Store the information in a row
-            np.save(f"./data_starmen/images_patch/Starman__subject_s{patient_id}__tp_{t}_patches.npy", patches)
-            
+            np.save(f"./data_starmen/images_patch/Starman__subject_s{patient_id}__tp_{t}_patches.npy", image_patches[t, not_black_patch_indices])
             row = {
                 "subject_id": str(patient_id),
                 "patch_id_min": patch_id,
-                "patch_id_max": patch_id + num_patch - 1,
+                "patch_id_max": patch_id + num_not_black_patch - 1,
                 "age": ages[patient_id*10 + t],
                 "patch_path": f"./data_starmen/images_patch/Starman__subject_s{patient_id}__tp_{t}_patches.npy" ,
             }
             data.append(row)
 
-        patch_id += num_patch
+        patch_id += num_not_black_patch
             
 
     data_df = pd.DataFrame(data)

@@ -331,49 +331,56 @@ def train_kfold_patch(model_type, path_best_fold_model, k_folds_index_list,
         
         # Loading them in the Dataset2D class and create DataLoader
         valid_dataset = LongitudinalDataset2D_patch(valid_df, transform=transformations)
-        train_dataset = LongitudinalDataset2D_patch(train_df, transform=transformations)
 
         valid_data_loader = DataLoader(valid_dataset, batch_size=batch_size, num_workers=num_workers, shuffle=False, pin_memory=True, collate_fn=longitudinal_collate_2D_patch)
-        train_data_loader = DataLoader(train_dataset, batch_size=batch_size, num_workers=num_workers, shuffle=False, pin_memory=True, collate_fn=longitudinal_collate_2D_patch)
 
         for epoch in iterator:
-            nb_batch = 0
-            model.training = True 
-            model.train()
-            total_loss = []
-            total_recon_loss, total_kl_loss, total_alignment_loss = 0.0, 0.0, 0.0
-
-            ### Fit the longitudinal mixed effect model
-            longitudinal_estimator, encodings_df = fit_longitudinal_estimator_on_nn_patch(train_data_loader, model, device,
-                                                                                        longitudinal_estimator,
-                                                                                        longitudinal_estimator_settings, patch_size=15)
-            timepoints_of_projection, predicted_latent_variables = project_encodings_for_training(encodings_df,
-                                                                                                longitudinal_estimator)
-            
-            # Training step
-            for data in train_data_loader:
-                nb_batch += 1
-                optimizer.zero_grad()
-                x = data[0].to(device).float()
-                mu, logVar, reconstructed, encoded = model(x)
-                reconstruction_loss, kl_loss = spatial_loss(mu, logVar, reconstructed, x)
-
-                loss = reconstruction_loss + model.beta * kl_loss
-                if longitudinal_estimator is not None:
-                    alignment_loss = longitudinal_loss(mu, torch.cat(([
-                        torch.tensor(predicted_latent_variables[str(subject_id)]).float().to(device) for subject_id in
-                        data[2]])))
-                    loss += model.gamma * alignment_loss
-                    total_alignment_loss += alignment_loss.item()
+            for i in range(len(folds_df_list)):
+                if i == valid_index:
+                    continue
+                train_df = pd.concat([folds_df_list[i]], ignore_index=True)
+                train_dataset = LongitudinalDataset2D_patch(train_df, transform=transformations)
+                train_data_loader = DataLoader(train_dataset, batch_size=batch_size, num_workers=num_workers, shuffle=False, pin_memory=True, collate_fn=longitudinal_collate_2D_patch)
 
 
-                loss.backward()
-                optimizer.step()
-                lr_scheduler.step()
+                nb_batch = 0
+                model.training = True 
+                model.train()
+                total_loss = []
+                total_recon_loss, total_kl_loss, total_alignment_loss = 0.0, 0.0, 0.0
 
-                total_loss.append(loss.item())
-                total_recon_loss += reconstruction_loss.item()
-                total_kl_loss += kl_loss.item()
+                ### Fit the longitudinal mixed effect model
+                longitudinal_estimator, encodings_df = fit_longitudinal_estimator_on_nn_patch(train_data_loader, model, device,
+                                                                                            longitudinal_estimator,
+                                                                                            longitudinal_estimator_settings, patch_size=15)
+                timepoints_of_projection, predicted_latent_variables = project_encodings_for_training(encodings_df,
+                                                                                                    longitudinal_estimator)
+                
+                # Training step
+                for data in train_data_loader:
+                    nb_batch += 1
+                    optimizer.zero_grad()
+                    x = data[0].to(device).float()
+                    mu, logVar, reconstructed, encoded = model(x)
+                    reconstruction_loss, kl_loss = spatial_loss(mu, logVar, reconstructed, x)
+
+                    loss = reconstruction_loss + model.beta * kl_loss
+                    if longitudinal_estimator is not None:
+                        alignment_loss = longitudinal_loss(mu, torch.cat(([
+                            torch.tensor(predicted_latent_variables[str(subject_id)]).float().to(device) for subject_id in
+                            data[2]])))
+                        loss += model.gamma * alignment_loss
+                        total_alignment_loss += alignment_loss.item()
+
+
+                    loss.backward()
+                    optimizer.step()
+                    lr_scheduler.step()
+
+                    total_loss.append(loss.item())
+                    total_recon_loss += reconstruction_loss.item()
+                    total_kl_loss += kl_loss.item()
+
 
             print("\n Reconstruction loss =", total_recon_loss / nb_batch, ", Weighted KL loss =",
                 total_kl_loss / nb_batch * model.beta,
