@@ -41,7 +41,7 @@ parser.add_argument('--iterations', type=int, required=False, default=200,
                     help='Number of iterations when training the longitudinal estimator, default = 200')
 parser.add_argument('--lr', type=float, required=False, default=1e-4,
                     help='Learning rate to train the VAE, default = 1e-4')
-parser.add_argument('--batch_size', type=int, required=False, default=20,
+parser.add_argument('--batch_size', type=int, required=False, default=5,
                     help='batch_size to train the VAE, default = 5')
 parser.add_argument("-skip", type=str, required=False, default="n")
 args = parser.parse_args()
@@ -64,13 +64,9 @@ latent_representation_size = args.dimension
 gamma = args.gamma
 beta = args.beta
 initial_lr = args.lr
-
-# HERE TO CHANGE VAE ARCHITECTURE
-model = CVAE2D_PATCH(latent_representation_size)
-model.gamma = gamma
-model.beta = beta
 loss_function = spatial_auto_encoder_loss
 print(f"{args.nnmodel_name}_{latent_representation_size}_{beta}_{gamma}_{args.iterations}")
+
 
 ### Hyperparameters of the longitudinal estimator
 all_losses = []

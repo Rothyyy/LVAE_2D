@@ -64,8 +64,14 @@ class Dataset2D_patch(Dataset):
         patch_path = summary_rows['patch_path']
         patch = np.load(patch_path)
         # patch = self.transform(patch)
-        patch = torch.tensor(patch).unsqueeze(1).float()
+        patch = torch.from_numpy(patch).unsqueeze(1).float()
         return patch
+
+
+def collate_2D_patch(batch):
+    images = torch.cat([patch for patch in batch if patch[0] is not None], axis=0)
+    return images
+
 
 
 if __name__ == "__main__":

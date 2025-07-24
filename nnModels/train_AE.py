@@ -8,7 +8,7 @@ import pandas as pd
 import os
 import sys
 import torchvision.transforms as transforms
-from dataset.Dataset2D import Dataset2D, Dataset2D_patch
+from dataset.Dataset2D import Dataset2D, Dataset2D_patch, collate_2D_patch
 from torch.utils.data import DataLoader
 from nnModels.CVAE2D import CVAE2D
 
@@ -116,14 +116,15 @@ def train_AE_kfold(model_type, k_folds_index_list, nb_epochs=100, device='cuda' 
         if train_patch:
             valid_dataset = Dataset2D_patch(valid_df, transform=transformations)
             train_dataset = Dataset2D_patch(train_df, transform=transformations)
+            valid_data_loader = DataLoader(valid_dataset, batch_size=batch_size, num_workers=num_workers, shuffle=True, pin_memory=True, collate_fn=collate_2D_patch)
+            train_data_loader = DataLoader(train_dataset, batch_size=batch_size, num_workers=num_workers, shuffle=True, pin_memory=True, collate_fn=collate_2D_patch)
 
         else:
             valid_dataset = Dataset2D(valid_df, transform=transformations)
             train_dataset = Dataset2D(train_df, transform=transformations)
+            valid_data_loader = DataLoader(valid_dataset, batch_size=batch_size, num_workers=num_workers, shuffle=True, pin_memory=True)
+            train_data_loader = DataLoader(train_dataset, batch_size=batch_size, num_workers=num_workers, shuffle=True, pin_memory=True)
 
-        # Create the DataLoader
-        valid_data_loader = DataLoader(valid_dataset, batch_size=batch_size, num_workers=num_workers, shuffle=True, pin_memory=True)
-        train_data_loader = DataLoader(train_dataset, batch_size=batch_size, num_workers=num_workers, shuffle=True, pin_memory=True)
 
         # Initialize the model
         model = model_type(latent_dimension)
