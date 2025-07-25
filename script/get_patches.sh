@@ -3,4 +3,6 @@
 cd data_starmen
 rm -r images_patch
 cd ..
-python ./dataset/patch_to_csv.py -t 22
+python -m dataset.patch_to_csv -t 22
+python -m dataset.group_based_train_test_split -p True
+python -m dataset.split_k_folds -p True

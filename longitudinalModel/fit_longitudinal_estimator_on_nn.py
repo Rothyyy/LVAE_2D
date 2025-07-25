@@ -49,7 +49,7 @@ def fit_longitudinal_estimator_on_nn(data_loader, model, device, longitudinal_es
 
 def fit_longitudinal_estimator_on_nn_patch(data_loader, model, device, longitudinal_estimator,
                                            longitudinal_estimator_settings, patch_size=15):
-    num_patch_per_image = 2500  # (64-patch_size//2)*(64-patch_size//2) = 50*50 = 2500
+    # num_patch_per_image = 2500  # (64-patch_size//2)*(64-patch_size//2) = 50*50 = 2500
     with torch.no_grad():
         encodings = []
         times = []
@@ -61,7 +61,8 @@ def fit_longitudinal_estimator_on_nn_patch(data_loader, model, device, longitudi
                             )
             for i in range(len(data[1])):
                 for image_timestamp in range(10):
-                    times.extend([data[1][i][image_timestamp]] * num_patch_per_image)
+                    num_patches = len(data[3][i][image_timestamp])
+                    times.extend([data[1][i][image_timestamp]] * num_patches)
                     patch_ids.extend(data[3][i][image_timestamp])
 
         # WARNING: If in the sample there are crops at different position for a same individual then

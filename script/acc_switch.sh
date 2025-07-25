@@ -6,4 +6,5 @@ rm -r images
 unzip starmen_acc.zip
 cd ..
 python -m dataset.dataset_to_csv
-python -m dataset.group_based_train_test_split
+python -m dataset.group_based_train_test_split -p False
+python -m dataset.split_k_folds -p False

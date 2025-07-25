@@ -1,5 +1,6 @@
 import pandas as pd
 import numpy as np
+import argparse
 from sklearn.model_selection import train_test_split
 
 def group_based_train_test_split(df, test_size=0.2, group_col='subject_id', random_state=42):
@@ -20,10 +21,22 @@ def group_based_train_test_split(df, test_size=0.2, group_col='subject_id', rand
     return train_df, test_df
 
 if __name__ == "__main__":
-    dataset_df = pd.read_csv("data_csv/starmen_dataset.csv")
-    train_df, test_df = group_based_train_test_split(dataset_df, test_size=0.2, group_col='subject_id', random_state=42)
-    train_df.to_csv('data_csv/starmen_train_set.csv', index=False)
-    test_df.to_csv('data_csv/starmen_test_set.csv', index=False)
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--patch", "-p", type=str, required=False, default=False)
+    args = parser.parse_args()
+    
+    if args.patch in ["True", "y"]:
+        dataset_path = "data_csv/starmen_dataset_patch.csv"
+        dataset_df = pd.read_csv(dataset_path)
+        train_df, test_df = group_based_train_test_split(dataset_df, test_size=0.2, group_col='subject_id', random_state=42)
+        train_df.to_csv('data_csv/starmen_patch_train_set.csv', index=False)
+        test_df.to_csv('data_csv/starmen_patch_test_set.csv', index=False)
+    else:
+        dataset_path = "data_csv/starmen_dataset.csv"
+        dataset_df = pd.read_csv(dataset_path)
+        train_df, test_df = group_based_train_test_split(dataset_df, test_size=0.2, group_col='subject_id', random_state=42)
+        train_df.to_csv('data_csv/starmen_train_set.csv', index=False)
+        test_df.to_csv('data_csv/starmen_test_set.csv', index=False)
 
 # To check the result
 # print(f"Original df shape: {df.shape}")
