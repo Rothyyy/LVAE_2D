@@ -66,6 +66,7 @@ def get_patch_centers(patch_size=15, image_shape=(64,64)):
 if __name__=="__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--size", "-s", type=int, required=False, default=15)
+    parser.add_argument("-threshold_pixel","-t", type=float, required=False, default=1)
     args = parser.parse_args()
 
     patch_size = args.size
@@ -80,11 +81,13 @@ if __name__=="__main__":
     data = []
     patch_id = 0
     black_patch_threshold = np.ones((patch_size, patch_size)) * 1e-6
+    num_pixel_threshold = args.threshold_pixel
 
     for patient_id in range(1000):  # For every subject
 
         print("Patient :", patient_id)
         image_patches = np.zeros((10, num_patch, patch_size, patch_size))
+        num_not_black_pixel = np.zeros((10, num_patch))
         not_black_patch_indices = np.zeros((10, num_patch), dtype=bool)
 
         for t in range(10):     # For every timestamp
@@ -96,9 +99,9 @@ if __name__=="__main__":
 
             # Store patches and check if patch are black or not
             image_patches[t] = patches
-            not_black_patch_indices[t] = (patches > black_patch_threshold).any(axis=(1,2))
-            # TODO: Instead of accepting patch with at least 1 not black pixel, accept patch with at least x% of not white pixel ?
-
+            num_not_black_pixel[t] = np.sum((patches > black_patch_threshold), axis=(1,2))
+            not_black_patch_indices[t] = num_not_black_pixel[t] >= num_pixel_threshold
+        
         not_black_patch_indices = np.where(not_black_patch_indices.any(0))[0]
         num_not_black_patch = not_black_patch_indices.shape[0]
 
@@ -111,7 +114,7 @@ if __name__=="__main__":
                 "patch_id_min": patch_id,
                 "patch_id_max": patch_id + num_not_black_patch - 1,
                 "age": ages[patient_id*10 + t],
-                "patch_path": f"./data_starmen/images_patch/Starman__subject_s{patient_id}__tp_{t}_patches.npy" ,
+                "patch_path": f"./data_starmen/images_patch/Starman__subject_s{patient_id}__tp_{t}_patches.npy",
             }
             data.append(row)
 

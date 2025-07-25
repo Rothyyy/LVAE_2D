@@ -11,7 +11,7 @@ import os
 from nnModels.CVAE2D_ORIGINAL import CVAE2D_ORIGINAL
 from nnModels.losses import spatial_auto_encoder_loss, longitudinal_loss
 
-from dataset.Dataset2D import Dataset2D, Dataset2D_patch
+from dataset.Dataset2D import Dataset2D, Dataset2D_patch, collate_2D_patch
 from dataset.LongitudinalDataset2D import LongitudinalDataset2D, longitudinal_collate_2D
 from dataset.LongitudinalDataset2D_patch import LongitudinalDataset2D_patch, longitudinal_collate_2D_patch
 
@@ -33,9 +33,10 @@ def CV_VAE(model_type, fold_index_list, test_set, nn_saving_path,
     folds_test_loss = np.zeros(len(fold_index_list))
     if cv_patch:
         dataset = Dataset2D_patch(test_set)
+        data_loader = DataLoader(dataset, batch_size=batch_size, num_workers=num_worker, shuffle=True, pin_memory=True, collate_fn=collate_2D_patch)
     else:
         dataset = Dataset2D(test_set)
-    data_loader = DataLoader(dataset, batch_size=batch_size, num_workers=num_worker, shuffle=True, pin_memory=True)
+        data_loader = DataLoader(dataset, batch_size=batch_size, num_workers=num_worker, shuffle=True, pin_memory=True)
 
     for fold_index in range(len(fold_index_list)):
         model = model_type(latent_dimension)
