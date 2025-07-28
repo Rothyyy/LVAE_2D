@@ -54,7 +54,7 @@ def compute_stats(all_losses, model, method):
 
 def plot_recon_error_histogram_patch(recon_error_list, model_name, method):
     
-    save_path = f"plots/recon_error/hist_patch_{model_name}_{method}.pdf"
+    save_path = f"plots/recon_error/hist_patch_{model_name}_{method}_{latent_dimension}.pdf"
     os.makedirs(f"plots/recon_error/", exist_ok=True)
     color = "tab:blue" if model_name=="VAE" else "tab:orange"
 
@@ -65,14 +65,10 @@ def plot_recon_error_histogram_patch(recon_error_list, model_name, method):
         recon_error_list *= 255
 
     # Create custom bin labels
-    if method == "image":
-        custom_bins = [i*2 for i in range(32)]
-    else:
-        custom_bins = [i*2 for i in range(30)]
+    custom_bins = [i for i in range(31)]
 
     fig, ax = plt.subplots()
     counts, bin_edges, patches = ax.hist(recon_error_list, color=color, edgecolor='black', bins=custom_bins)
-
     # Set ticks
     bin_labels = [f'{int(bin_edges[i])}-{int(bin_edges[i+1])}' for i in range(len(bin_edges) - 1)]
     bin_centers = 0.5 * (bin_edges[:-1] + bin_edges[1:])
@@ -87,13 +83,8 @@ def plot_recon_error_histogram_patch(recon_error_list, model_name, method):
     # Add axis labels and title
     ax.set_xlabel('Reconstruction error range')
     ax.set_ylabel('Count')
-    if method == "image":
-        ax.set_title(f'Reconstruction errors when considering {method} with {model_name}')
-        # ax.set_ylim(0, 10000)
-
-    elif method == "pixel":
-        ax.set_title(f'Pixel differences with {model_name}')
-        ax.set_ylim(0, 1e7)
+    ax.set_title(f'Reconstruction errors when considering patches with {model_name} (dim {latent_dimension})')
+    ax.set_ylim(0, 1e6)
 
     # Layout fix
     fig.tight_layout()
@@ -131,14 +122,6 @@ if __name__ == "__main__":
     set_choice = args.set
     stats_dict = {}
 
-    # If true then we plot from a saved list of losses
-    if args.plot:
-        print("Plot from previous all_losses file only !")
-        with open('data_csv/VAE_patch_losses.json', 'r') as f:
-            all_losses = json.load(f)
-        plot_recon_error_histogram_patch(np.array(all_losses), "VAE", method)
-        exit()
-
     # Setting some parameters
     patch_size = args.size
     latent_dimension = args.dim
@@ -147,6 +130,16 @@ if __name__ == "__main__":
     gamma = args.gamma
     num_worker = round(os.cpu_count()/6)
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
+
+    # If true then we plot from a saved list of losses
+    if args.plot:
+        print("Plot from previous all_losses file only !")
+        with open(f'data_csv/VAE_patch_losses_{latent_dimension}.json', 'r') as f:
+            all_losses = json.load(f)
+        plot_recon_error_histogram_patch(np.array(all_losses), "VAE", method)
+        exit()
+
+    
 
     # Getting the path to the saved models
     VAE_nn_saving_path = f"saved_models_2D/best_patch_fold_CVAE2D_{latent_dimension}_{beta}.pth"
@@ -249,7 +242,7 @@ if __name__ == "__main__":
         print("dict =", stats_dict) 
 
     # Saving the stats dictionnary and all the losses in a json file
-    with open('data_csv/VAE_patch_losses.json', 'w') as f:
+    with open(f'data_csv/VAE_patch_losses_{latent_dimension}.json', 'w') as f:
         json.dump(all_losses, f)
 
     with open(f'data_csv/threshold_json/anomaly_threshold_patch_{method}_{latent_dimension}_{beta}.json', 'w') as f:

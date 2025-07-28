@@ -106,7 +106,10 @@ def train_AE_kfold(model_type, k_folds_index_list, nb_epochs=100, device='cuda' 
     
     nb_epochs_without_loss_improvement = 0
     valid_index = 0
-    transformations = transforms.Compose([])
+    transformations = transforms.Compose([
+                transforms.Lambda(lambda x: x.to(torch.float32))
+                # , transforms.Lambda(lambda x: 2*x - 1)
+            ])
     for valid_index in range(len(folds_df_list)):
         # Selecting validation and training dataframe
         valid_df = folds_df_list[valid_index]

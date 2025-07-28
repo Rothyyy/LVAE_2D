@@ -42,6 +42,9 @@ class LongitudinalDataset2D_patch(Dataset):
         if len(patches) == 0:
             return None, None, None, None
 
+        if self.transform:
+            patches = self.transform(patches)
+
         # TODO: find a better way to code this, so there's no need to read each image 2 times
         return patches, [summary_rows['age'].iloc[i] for i in range(len(summary_rows))], patient_id, patch_id_list
     
@@ -62,6 +65,9 @@ class LongitudinalDataset2D_patch(Dataset):
                         ]
         if len(patches) == 0:
             return None, None, None, None
+
+        if self.transform:
+            patches = self.transform(patches)
 
         return patches, [summary_rows['age'].iloc[i] for i in range(len(summary_rows))], patch_id_list
 

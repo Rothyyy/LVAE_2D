@@ -51,10 +51,7 @@ class Dataset2D_patch(Dataset):
         else:
             print("Error type when loading data, check file name or type")
             exit()
-        self.transform = transforms.Compose([
-            transforms.ToTensor(),
-            transforms.Lambda(lambda x: x.to(torch.float32))
-        ])
+        self.transform = transform
 
     def __len__(self):
         return len(self.summary_dataframe)
@@ -63,8 +60,11 @@ class Dataset2D_patch(Dataset):
         summary_rows = self.summary_dataframe.iloc[idx]
         patch_path = summary_rows['patch_path']
         patch = np.load(patch_path)
-        # patch = self.transform(patch)
         patch = torch.from_numpy(patch).unsqueeze(1).float()
+
+        if self.transform:
+            patch = self.transform(patch)
+            
         return patch
 
 
