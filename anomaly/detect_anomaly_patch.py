@@ -202,8 +202,7 @@ if __name__=="__main__":
                 # LVAE_anomaly_detected_99 += torch.sum(reconstruction_error > LVAE_threshold_99).detach().cpu().item()
 
             # For a subject, plot the anomalous image, the reconstructed image and the residual
-            plot_anomaly_figure_patch(image_array_original, image_array_reconstructed, anomaly_map, id, anomaly)
-            exit()
+            plot_anomaly_figure_patch(image_array_original, image_array_reconstructed, anomaly_map, id, anomaly, latent_dimension=latent_dimension)
 
 
         # if method == "image":   # pixel or pixel_all would have too many bar to plot making it unreadable

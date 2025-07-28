@@ -108,13 +108,13 @@ def plot_anomaly_figure(original_image, reconstructed_image_VAE, reconstructed_i
 
 
 def plot_anomaly_figure_patch(original_image, reconstructed_image_VAE, anomaly_map_VAE,
-                                id, anomaly_type):
+                                id, anomaly_type, latent_dimension = None):
     """
     We enter this function when an anomaly is detected.
     The function will plot the image and save it in a pdf file.
     """
     os.makedirs(f"plots/fig_anomaly_reconstruction/{anomaly_type}", exist_ok=True)
-    save_path = f"plots/fig_anomaly_reconstruction/{anomaly_type}/AD_subject_{id}.pdf"
+    save_path = f"plots/fig_anomaly_reconstruction/{anomaly_type}/AD_{latent_dimension}_subject_{id}.pdf"
 
     # Compute the residual and binary mask
     fig_width = original_image.shape[0] * 10

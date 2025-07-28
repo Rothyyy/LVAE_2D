@@ -79,7 +79,8 @@ class CVAE2D_PATCH(nn.Module):
         # print("Shape h7 =", h7.shape)
         h8 = F.gelu(self.bn7(self.deconv3(h7))) 
         # print("Shape h8 =", h8.shape)
-        h9 = F.gelu(self.bn8(self.deconv4(h8))) 
+        # h9 = F.gelu(self.bn8(self.deconv4(h8)))       # VERSION output in [0,1]
+        h9 = F.tanh(self.bn8(self.deconv4(h8)))     # VERSION output in [-1,1]
         # print("Shape h9 =", h9.shape)
 
         return h9

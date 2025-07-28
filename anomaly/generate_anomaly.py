@@ -95,7 +95,7 @@ if __name__ == "__main__":
             row = {
                 "age": ages[t] , 
                 "image_path": f"./data_starmen/anomaly_images/{anomaly_image_name}" ,
-                "subject_id": str(subject + 1000)   # subject + 1000 to simulate new patient
+                "subject_id": str(subject) 
             }
             data_image.append(row)
 
@@ -105,7 +105,7 @@ if __name__ == "__main__":
                 f"{anomaly}__starman__subject_s{subject}__tp_{t}.npy"
                 np.save(f"./data_starmen/anomaly_patches/{anomaly}__starman__subject_s{subject}__tp_{t}_patches.npy", patches)
                 row = {
-                    "subject_id": str(subject),  # subject + 1000 to simulate new patient
+                    "subject_id": str(subject),
                     "patch_id_min": patch_id,
                     "patch_id_max": patch_id + num_patch - 1,
                     "age": ages[t],

@@ -302,7 +302,284 @@ def train_kfold_patch(model_type, path_best_fold_model, k_folds_index_list,
     """
     Same as above but with KFold
     """
-    transformations = transforms.Compose([])
+    transformations = transforms.Compose([
+            transforms.Lambda(lambda x: x.to(torch.float32))
+            , transforms.Lambda(lambda x: 2*x - 1)
+        ])
+
+    iterator = tqdm(range(nb_epochs), desc="Training", file=sys.stdout)
+    folds_df_list = [pd.read_csv(f"data_csv/train_patch_folds/starmen_patch_train_set_fold_{i}.csv") for i in k_folds_index_list]
+    
+    algo_settings_final_fit = AlgorithmSettings('mcmc_saem', n_iter=30000, seed=45, noise_model="gaussian_diagonal")
+
+    for valid_index in range(len(folds_df_list)):
+        model = model_type(latent_dimension)
+        model.gamma = gamma
+        model.beta = beta
+        model.load_state_dict(torch.load(path_best_fold_model, map_location='cpu'))
+        model.device = device
+        model.to(device)
+
+        longitudinal_estimator = Leaspy("linear", noise_model="gaussian_diagonal", source_dimension=latent_dimension - 1)
+
+        best_loss = previous_best_loss
+        optimizer = optim.Adam(filter(lambda p: p.requires_grad, model.parameters()))
+        lr_scheduler = CosineAnnealingWarmRestarts(optimizer, T_0=1, T_mult=2, eta_min=1e-5)
+        nb_epochs_without_loss_improvement = 0
+        losses = []
+
+        iterator = tqdm(range(nb_epochs), desc="Training", file=sys.stdout)        # Selecting validation and training dataframe
+        valid_df = folds_df_list[valid_index]
+        train_df = pd.concat([ folds_df_list[i] for i in range(len(folds_df_list)) if i != valid_index ], ignore_index=True)
+        
+        # Loading them in the Dataset2D class and create DataLoader
+        train_dataset = LongitudinalDataset2D_patch(train_df, transform=transformations)
+        valid_dataset = LongitudinalDataset2D_patch(valid_df, transform=transformations)
+
+        train_data_loader = DataLoader(train_dataset, batch_size=batch_size, num_workers=num_workers, shuffle=False, pin_memory=True, collate_fn=longitudinal_collate_2D_patch)
+        valid_data_loader = DataLoader(valid_dataset, batch_size=batch_size, num_workers=num_workers, shuffle=False, pin_memory=True, collate_fn=longitudinal_collate_2D_patch)
+
+        for epoch in iterator:
+                
+            nb_batch = 0
+            model.training = True 
+            model.train()
+            total_loss = []
+            total_recon_loss, total_kl_loss, total_alignment_loss = 0.0, 0.0, 0.0
+
+            ### Fit the longitudinal mixed effect model
+            longitudinal_estimator, encodings_df = fit_longitudinal_estimator_on_nn_patch(train_data_loader, model, device,
+                                                                                        longitudinal_estimator,
+                                                                                        longitudinal_estimator_settings, patch_size=15)
+            timepoints_of_projection, predicted_latent_variables = project_encodings_for_training(encodings_df,
+                                                                                                longitudinal_estimator)
+            
+            # Training step
+            for data in train_data_loader:
+                nb_batch += 1
+                optimizer.zero_grad()
+                x = data[0].to(device).float()
+                mu, logVar, reconstructed, encoded = model(x)
+                reconstruction_loss, kl_loss = spatial_loss(mu, logVar, reconstructed, x)
+
+                loss = reconstruction_loss + model.beta * kl_loss
+                if longitudinal_estimator is not None:
+                    alignment_loss = longitudinal_loss(mu, torch.cat(([
+                        torch.tensor(predicted_latent_variables[str(subject_id)]).float().to(device) for subject_id in
+                        data[2]])))
+                    loss += model.gamma * alignment_loss
+                    total_alignment_loss += alignment_loss.item()
+
+
+                loss.backward()
+                optimizer.step()
+                lr_scheduler.step()
+
+                total_loss.append(loss.item())
+                total_recon_loss += reconstruction_loss.item()
+                total_kl_loss += kl_loss.item()
+
+
+            print("\n Reconstruction loss =", total_recon_loss / nb_batch, ", Weighted KL loss =",
+                total_kl_loss / nb_batch * model.beta,
+                ", Weighted alignment loss =", total_alignment_loss / nb_batch * model.gamma, "\n")
+
+            train_loss = sum(total_loss) / nb_batch
+            epoch_loss = train_loss
+
+            # Validation step
+            model.eval()
+            model.training = False
+            epoch_loss = test(model, valid_data_loader,
+                                longitudinal_estimator=longitudinal_estimator,
+                                device=device,
+                                spatial_loss=spatial_loss)
+
+            losses.append(epoch_loss)
+
+            iterator.set_postfix({"epoch": epoch, "train loss": train_loss, "validation loss": epoch_loss, })
+
+            if epoch_loss < best_loss:
+                nb_epochs_without_loss_improvement = 0
+                best_loss = epoch_loss
+                if nn_saving_path is not None or longitudinal_saving_path is not None:
+                    print({"\n saving params..... \n"})
+                    if nn_saving_path is not None:
+                        torch.save(model.state_dict(), nn_saving_path+f"_fold_{valid_index}.pth2")
+                    if longitudinal_estimator is not None and longitudinal_saving_path is not None:
+                        longitudinal_estimator.save(longitudinal_saving_path+f"_fold_{valid_index}.json")
+            else:
+                nb_epochs_without_loss_improvement += 1
+
+            if nb_epochs_without_loss_improvement >= 10:
+                break
+        print("\n")
+        plt.plot(np.arange(1, len(losses) + 1), losses, label="Train loss (LVAE)")
+        plt.grid(True)
+        plt.legend()
+        plt.savefig(f"{loss_graph_saving_path}loss_LVAE_fold_{valid_index}.pdf")
+        plt.show()
+        plt.clf()
+
+        results_estimator, _ = fit_longitudinal_estimator_on_nn(train_data_loader, model, device, longitudinal_estimator,
+                                                                algo_settings_final_fit)
+        results_estimator.save(longitudinal_saving_path + f"_fold_{valid_index}" + ".json2")
+
+
+    return best_loss, losses
+
+
+
+def train_kfold_patch_v1(model_type, path_best_fold_model, k_folds_index_list,
+          longitudinal_estimator_settings=None, nb_epochs=100, lr=0.01, freeze = "no_freeze",
+          device='cuda' if torch.cuda.is_available() else 'cpu', nn_saving_path=None, longitudinal_saving_path=None,
+          loss_graph_saving_path=None, previous_best_loss=1e15, spatial_loss=spatial_auto_encoder_loss,
+          batch_size=256, num_workers=round(os.cpu_count()/4),
+          latent_dimension=64, gamma=100, beta=5):
+    """
+    Same as above but with KFold
+    """
+    transformations = transforms.Compose([
+            transforms.Lambda(lambda x: x.to(torch.float32))
+            , transforms.Lambda(lambda x: 2*x - 1)
+        ])
+
+    iterator = tqdm(range(nb_epochs), desc="Training", file=sys.stdout)
+    folds_df_list = [pd.read_csv(f"data_csv/train_patch_folds/starmen_patch_train_set_fold_{i}.csv") for i in k_folds_index_list]
+    
+    algo_settings_final_fit = AlgorithmSettings('mcmc_saem', n_iter=30000, seed=45, noise_model="gaussian_diagonal")
+
+    for valid_index in range(len(folds_df_list)):
+        model = model_type(latent_dimension)
+        model.gamma = gamma
+        model.beta = beta
+        model.load_state_dict(torch.load(path_best_fold_model, map_location='cpu'))
+        model.device = device
+        model.to(device)
+
+        longitudinal_estimator = Leaspy("linear", noise_model="gaussian_diagonal", source_dimension=latent_dimension - 1)
+
+        best_loss = previous_best_loss
+        optimizer = optim.Adam(filter(lambda p: p.requires_grad, model.parameters()))
+        lr_scheduler = CosineAnnealingWarmRestarts(optimizer, T_0=1, T_mult=2, eta_min=1e-5)
+        nb_epochs_without_loss_improvement = 0
+        losses = []
+
+        iterator = tqdm(range(nb_epochs), desc="Training", file=sys.stdout)        # Selecting validation and training dataframe
+        valid_df = folds_df_list[valid_index]
+        train_df = pd.concat([ folds_df_list[i] for i in range(len(folds_df_list)) if i != valid_index ], ignore_index=True)
+        
+        # Loading them in the Dataset2D class and create DataLoader
+        train_dataset = LongitudinalDataset2D_patch(train_df, transform=transformations)
+        valid_dataset = LongitudinalDataset2D_patch(valid_df, transform=transformations)
+
+        train_data_loader = DataLoader(train_dataset, batch_size=batch_size, num_workers=num_workers, shuffle=False, pin_memory=True, collate_fn=longitudinal_collate_2D_patch)
+        valid_data_loader = DataLoader(valid_dataset, batch_size=batch_size, num_workers=num_workers, shuffle=False, pin_memory=True, collate_fn=longitudinal_collate_2D_patch)
+
+        for epoch in iterator:
+                
+            nb_batch = 0
+            model.training = True 
+            model.train()
+            total_loss = []
+            total_recon_loss, total_kl_loss, total_alignment_loss = 0.0, 0.0, 0.0
+
+            ### Fit the longitudinal mixed effect model
+            longitudinal_estimator, encodings_df = fit_longitudinal_estimator_on_nn_patch(train_data_loader, model, device,
+                                                                                        longitudinal_estimator,
+                                                                                        longitudinal_estimator_settings, patch_size=15)
+            timepoints_of_projection, predicted_latent_variables = project_encodings_for_training(encodings_df,
+                                                                                                longitudinal_estimator)
+            
+            # Training step
+            for data in train_data_loader:
+                nb_batch += 1
+                optimizer.zero_grad()
+                x = data[0].to(device).float()
+                mu, logVar, reconstructed, encoded = model(x)
+                reconstruction_loss, kl_loss = spatial_loss(mu, logVar, reconstructed, x)
+
+                loss = reconstruction_loss + model.beta * kl_loss
+                if longitudinal_estimator is not None:
+                    alignment_loss = longitudinal_loss(mu, torch.cat(([
+                        torch.tensor(predicted_latent_variables[str(subject_id)]).float().to(device) for subject_id in
+                        data[2]])))
+                    loss += model.gamma * alignment_loss
+                    total_alignment_loss += alignment_loss.item()
+
+
+                loss.backward()
+                optimizer.step()
+                lr_scheduler.step()
+
+                total_loss.append(loss.item())
+                total_recon_loss += reconstruction_loss.item()
+                total_kl_loss += kl_loss.item()
+
+
+            print("\n Reconstruction loss =", total_recon_loss / nb_batch, ", Weighted KL loss =",
+                total_kl_loss / nb_batch * model.beta,
+                ", Weighted alignment loss =", total_alignment_loss / nb_batch * model.gamma, "\n")
+
+            train_loss = sum(total_loss) / nb_batch
+            epoch_loss = train_loss
+
+            # Validation step
+            model.eval()
+            model.training = False
+            epoch_loss = test(model, valid_data_loader,
+                                longitudinal_estimator=longitudinal_estimator,
+                                device=device,
+                                spatial_loss=spatial_loss)
+
+            losses.append(epoch_loss)
+
+            iterator.set_postfix({"epoch": epoch, "train loss": train_loss, "validation loss": epoch_loss, })
+
+            if epoch_loss < best_loss:
+                nb_epochs_without_loss_improvement = 0
+                best_loss = epoch_loss
+                if nn_saving_path is not None or longitudinal_saving_path is not None:
+                    print({"\n saving params..... \n"})
+                    if nn_saving_path is not None:
+                        torch.save(model.state_dict(), nn_saving_path+f"_fold_{valid_index}.pth2")
+                    if longitudinal_estimator is not None and longitudinal_saving_path is not None:
+                        longitudinal_estimator.save(longitudinal_saving_path+f"_fold_{valid_index}.json")
+            else:
+                nb_epochs_without_loss_improvement += 1
+
+            if nb_epochs_without_loss_improvement >= 10:
+                break
+        print("\n")
+        plt.plot(np.arange(1, len(losses) + 1), losses, label="Train loss (LVAE)")
+        plt.grid(True)
+        plt.legend()
+        plt.savefig(f"{loss_graph_saving_path}loss_LVAE_fold_{valid_index}.pdf")
+        plt.show()
+        plt.clf()
+
+        results_estimator, _ = fit_longitudinal_estimator_on_nn(train_data_loader, model, device, longitudinal_estimator,
+                                                                algo_settings_final_fit)
+        results_estimator.save(longitudinal_saving_path + f"_fold_{valid_index}" + ".json2")
+
+
+    return best_loss, losses
+
+
+
+def train_kfold_patch_v2(model_type, path_best_fold_model, k_folds_index_list,
+          longitudinal_estimator_settings=None, nb_epochs=100, lr=0.01, freeze = "no_freeze",
+          device='cuda' if torch.cuda.is_available() else 'cpu', nn_saving_path=None, longitudinal_saving_path=None,
+          loss_graph_saving_path=None, previous_best_loss=1e15, spatial_loss=spatial_auto_encoder_loss,
+          batch_size=256, num_workers=round(os.cpu_count()/4),
+          latent_dimension=64, gamma=100, beta=5):
+    """
+    Same as above but with KFold
+    """
+    transformations = transforms.Compose([
+            transforms.Lambda(lambda x: x.to(torch.float32))
+            , transforms.Lambda(lambda x: 2*x - 1)
+        ])
 
     iterator = tqdm(range(nb_epochs), desc="Training", file=sys.stdout)
     folds_df_list = [pd.read_csv(f"data_csv/train_patch_folds/starmen_patch_train_set_fold_{i}.csv") for i in k_folds_index_list]
