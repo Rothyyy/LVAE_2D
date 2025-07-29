@@ -194,7 +194,7 @@ def train_AE_kfold(model_type, k_folds_index_list, nb_epochs=100, device='cuda' 
             else:
                 nb_epochs_without_loss_improvement += 1
             
-            if nb_epochs_without_loss_improvement >= 5:
+            if nb_epochs_without_loss_improvement >= 15:
                 break
 
             plt.plot(np.arange(1, len(losses) + 1), losses)

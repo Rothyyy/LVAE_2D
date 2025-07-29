@@ -9,7 +9,7 @@ import os
 import sys
 from longitudinalModel.project_encodings_for_training import project_encodings_for_training
 from longitudinalModel.test import test
-from longitudinalModel.fit_longitudinal_estimator_on_nn import fit_longitudinal_estimator_on_nn, fit_longitudinal_estimator_on_nn_patch
+from longitudinalModel.fit_longitudinal_estimator_on_nn import fit_longitudinal_estimator_on_nn, fit_longitudinal_estimator_on_nn_patch, fit_longitudinal_estimator_on_nn_patch_v1, fit_longitudinal_estimator_on_nn_patch_v2
 from nnModels.losses import longitudinal_loss, spatial_auto_encoder_loss
 from torch.optim.lr_scheduler import CosineAnnealingWarmRestarts
 import torch.nn.functional as F
@@ -299,9 +299,7 @@ def train_kfold_patch(model_type, path_best_fold_model, k_folds_index_list,
           loss_graph_saving_path=None, previous_best_loss=1e15, spatial_loss=spatial_auto_encoder_loss,
           batch_size=256, num_workers=round(os.cpu_count()/4),
           latent_dimension=64, gamma=100, beta=5):
-    """
-    Same as above but with KFold
-    """
+
     transformations = transforms.Compose([
             transforms.Lambda(lambda x: x.to(torch.float32))
             , transforms.Lambda(lambda x: 2*x - 1)
@@ -436,9 +434,7 @@ def train_kfold_patch_v1(model_type, path_best_fold_model, k_folds_index_list,
           loss_graph_saving_path=None, previous_best_loss=1e15, spatial_loss=spatial_auto_encoder_loss,
           batch_size=256, num_workers=round(os.cpu_count()/4),
           latent_dimension=64, gamma=100, beta=5):
-    """
-    Same as above but with KFold
-    """
+    
     transformations = transforms.Compose([
             transforms.Lambda(lambda x: x.to(torch.float32))
             , transforms.Lambda(lambda x: 2*x - 1)
@@ -485,14 +481,15 @@ def train_kfold_patch_v1(model_type, path_best_fold_model, k_folds_index_list,
             total_recon_loss, total_kl_loss, total_alignment_loss = 0.0, 0.0, 0.0
 
             ### Fit the longitudinal mixed effect model
-            longitudinal_estimator, encodings_df = fit_longitudinal_estimator_on_nn_patch(train_data_loader, model, device,
-                                                                                        longitudinal_estimator,
-                                                                                        longitudinal_estimator_settings, patch_size=15)
-            timepoints_of_projection, predicted_latent_variables = project_encodings_for_training(encodings_df,
-                                                                                                longitudinal_estimator)
+            
             
             # Training step
             for data in train_data_loader:
+                longitudinal_estimator, encodings_df = fit_longitudinal_estimator_on_nn_patch_v1(data, model, device,
+                                                                                                longitudinal_estimator,
+                                                                                                longitudinal_estimator_settings, patch_size=15)
+                timepoints_of_projection, predicted_latent_variables = project_encodings_for_training(encodings_df,
+                                                                                                longitudinal_estimator)
                 nb_batch += 1
                 optimizer.zero_grad()
                 x = data[0].to(device).float()
@@ -573,9 +570,13 @@ def train_kfold_patch_v2(model_type, path_best_fold_model, k_folds_index_list,
           loss_graph_saving_path=None, previous_best_loss=1e15, spatial_loss=spatial_auto_encoder_loss,
           batch_size=256, num_workers=round(os.cpu_count()/4),
           latent_dimension=64, gamma=100, beta=5):
-    """
-    Same as above but with KFold
-    """
+
+
+    def get_chunk(dataset, chunk_idx, chunk_size):
+        start = chunk_idx * chunk_size
+        end = min(start + chunk_size, len(dataset))
+        return torch.utils.data.Subset(dataset, list(range(start, end)))
+
     transformations = transforms.Compose([
             transforms.Lambda(lambda x: x.to(torch.float32))
             , transforms.Lambda(lambda x: 2*x - 1)
@@ -613,8 +614,14 @@ def train_kfold_patch_v2(model_type, path_best_fold_model, k_folds_index_list,
         train_data_loader = DataLoader(train_dataset, batch_size=batch_size, num_workers=num_workers, shuffle=False, pin_memory=True, collate_fn=longitudinal_collate_2D_patch)
         valid_data_loader = DataLoader(valid_dataset, batch_size=batch_size, num_workers=num_workers, shuffle=False, pin_memory=True, collate_fn=longitudinal_collate_2D_patch)
 
+        chunk_size = int(0.1 * len(train_dataset))  # 10%
+        total_chunks = len(train_dataset) // chunk_size + (len(train_dataset) % chunk_size > 0)
+
         for epoch in iterator:
                 
+            chunk_idx = epoch % total_chunks  # cycles through chunks
+            subset = get_chunk(train_dataset, chunk_idx, chunk_size)
+            loader = DataLoader(subset, batch_size=batch_size, shuffle=False, pin_memory=True, collate_fn=longitudinal_collate_2D_patch)
             nb_batch = 0
             model.training = True 
             model.train()
@@ -622,14 +629,14 @@ def train_kfold_patch_v2(model_type, path_best_fold_model, k_folds_index_list,
             total_recon_loss, total_kl_loss, total_alignment_loss = 0.0, 0.0, 0.0
 
             ### Fit the longitudinal mixed effect model
-            longitudinal_estimator, encodings_df = fit_longitudinal_estimator_on_nn_patch(train_data_loader, model, device,
+            longitudinal_estimator, encodings_df = fit_longitudinal_estimator_on_nn_patch(loader, model, device,
                                                                                         longitudinal_estimator,
                                                                                         longitudinal_estimator_settings, patch_size=15)
             timepoints_of_projection, predicted_latent_variables = project_encodings_for_training(encodings_df,
                                                                                                 longitudinal_estimator)
             
             # Training step
-            for data in train_data_loader:
+            for data in loader:
                 nb_batch += 1
                 optimizer.zero_grad()
                 x = data[0].to(device).float()
