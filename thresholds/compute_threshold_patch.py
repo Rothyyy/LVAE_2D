@@ -63,7 +63,7 @@ def plot_recon_error_histogram_patch(recon_error_list, model_name, method):
         recon_error_list *= 255
 
     # Create custom bin labels
-    custom_bins = [i for i in range(31)]
+    custom_bins = [i*50 for i in range(20)]
 
     fig, ax = plt.subplots()
     counts, bin_edges, patches = ax.hist(recon_error_list, color=color, edgecolor='black', bins=custom_bins)

@@ -23,7 +23,7 @@ from dataset.LongitudinalDataset2D_patch import LongitudinalDataset2D_patch, lon
 from .plot_anomaly import plot_anomaly_bar, plot_anomaly_figure_patch
 from utils.patch_to_image import pad_array, pixel_counting, patch_to_image
 
-
+np.set_printoptions(threshold=np.inf)
 
 def compute_pixel_ano_score(patch_loss):
 
@@ -183,9 +183,9 @@ if __name__=="__main__":
                 ###### Compute VAE's reconstruction error
                 anomaly_score_array = loss_function(recon_patches_VAE[t], patches[t]).numpy().reshape((50,50))  # shape = [50, 50]
                 anomaly_score_array = pad_array(anomaly_score_array)    # shape = [64, 64]
-                pixel_score = anomaly_score_array
                 # pixel_score = compute_pixel_ano_score(anomaly_score_array)      # shape = [64, 64]
-
+                pixel_score = anomaly_score_array
+                
                 # Post processing before getting the image
                 patches = (patches + 1) / 2
                 recon_patches_VAE = (recon_patches_VAE + 1) / 2
@@ -194,9 +194,8 @@ if __name__=="__main__":
                 image_array_original[t] = patch_to_image(patches[t, :, 0].numpy())
                 image_array_reconstructed[t] = patch_to_image(recon_patches_VAE[t,: , 0].numpy())
 
-                anomaly_map[t] = pixel_score > VAE_threshold_99   #  !!! Here to change which threshold to use
+                anomaly_map[t] = pixel_score > VAE_threshold_95   #  !!! Here to change which threshold to use
                 # total_detection_anomaly_VAE[t] += np.sum(anomaly_map[t])
-
 
                 ###### Compute LVAE's reconstruction error
                 
