@@ -99,7 +99,7 @@ if __name__=="__main__":
     
 
     ######## TEST WITH VAE ########
-    print("Start anomaly detection")
+    print(f"Start anomaly detection : anomaly={anomaly}, latent dimension={latent_dimension}")
 
     # Getting the model's path
     model_VAE_path = f"saved_models_2D/best_patch_fold_CVAE2D_{latent_dimension}_{beta}.pth"
@@ -126,8 +126,12 @@ if __name__=="__main__":
 
 
     # Loading anomaly dataset and thresholds
-    transformations = transforms.Compose([])
-    dataset = LongitudinalDataset2D_patch(anomaly_dataset_path, read_image=open_npy,transform=transformations)
+    # transformations = transforms.Compose([])
+    transformations = transforms.Compose([
+            transforms.Lambda(lambda x: x.to(torch.float32))
+            , transforms.Lambda(lambda x: 2*x - 1)
+        ])
+    dataset = LongitudinalDataset2D_patch(anomaly_dataset_path, read_image=open_npy, transform=transformations)
     data_loader = DataLoader(dataset, batch_size=1, num_workers=num_workers, pin_memory=True, collate_fn=longitudinal_collate_2D_patch, shuffle=False)
     
     VAE_threshold_95 = threshold_dict["VAE_threshold_95"]
@@ -165,7 +169,7 @@ if __name__=="__main__":
 
             # Reshape the patches into shape = [10, 2500, 1, 15, 15]
             patches = patches.reshape((10, 2500, 1, 15, 15))
-            recon_patches_VAE = recon_patches_VAE.reshape((10, 2500, 15, 15))
+            recon_patches_VAE = recon_patches_VAE.reshape((10, 2500, 1, 15, 15))
 
             # TODO: It would be faster to simply load the image from the right folders => Have to write the right paths
             image_array_original = np.zeros((10,64,64))  # Array to store image to plot
@@ -179,7 +183,13 @@ if __name__=="__main__":
                 ###### Compute VAE's reconstruction error
                 anomaly_score_array = loss_function(recon_patches_VAE[t], patches[t]).numpy().reshape((50,50))  # shape = [50, 50]
                 anomaly_score_array = pad_array(anomaly_score_array)    # shape = [64, 64]
-                pixel_score = compute_pixel_ano_score(anomaly_score_array)      # shape = [64, 64]
+                pixel_score = anomaly_score_array
+                # pixel_score = compute_pixel_ano_score(anomaly_score_array)      # shape = [64, 64]
+
+                # Post processing before getting the image
+                patches = (patches + 1) / 2
+                recon_patches_VAE = (recon_patches_VAE + 1) / 2
+ 
 
                 image_array_original[t] = patch_to_image(patches[t, :, 0].numpy())
                 image_array_reconstructed[t] = patch_to_image(recon_patches_VAE[t,: , 0].numpy())

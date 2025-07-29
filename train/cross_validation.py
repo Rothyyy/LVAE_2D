@@ -31,8 +31,12 @@ def CV_VAE(model_type, fold_index_list, test_set, nn_saving_path,
     best_fold = 0
     best_loss = torch.inf
     folds_test_loss = np.zeros(len(fold_index_list))
+    transformations = transforms.Compose([
+            transforms.Lambda(lambda x: x.to(torch.float32))
+            , transforms.Lambda(lambda x: 2*x - 1)
+        ])
     if cv_patch:
-        dataset = Dataset2D_patch(test_set)
+        dataset = Dataset2D_patch(test_set, transform=transformations)
         data_loader = DataLoader(dataset, batch_size=batch_size, num_workers=num_worker, shuffle=True, pin_memory=True, collate_fn=collate_2D_patch)
     else:
         dataset = Dataset2D(test_set)
@@ -92,8 +96,12 @@ def CV_LVAE(model_type, fold_index_list, test_set, nn_saving_path, longitudinal_
            latent_dimension=4, gamma=100, beta=5, iterations=200,
            num_worker=round(os.cpu_count()/4), cv_patch=False):
 
+    transformations = transforms.Compose([
+            transforms.Lambda(lambda x: x.to(torch.float32))
+            , transforms.Lambda(lambda x: 2*x - 1)
+        ])
     if cv_patch:
-        dataset = LongitudinalDataset2D_patch(test_set)
+        dataset = LongitudinalDataset2D_patch(test_set, transform=transformations)
         test_data_loader = DataLoader(dataset, batch_size=1, num_workers=num_worker, shuffle=True, pin_memory=True, collate_fn=longitudinal_collate_2D_patch)
     else:
         dataset = LongitudinalDataset2D(test_set)

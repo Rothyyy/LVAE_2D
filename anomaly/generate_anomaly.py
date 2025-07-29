@@ -91,6 +91,10 @@ if __name__ == "__main__":
                            max(0, 200-20*round(ages[t]-ages[0])),
                            max(0, 200-20*round(ages[t]-ages[0])))), 2)
 
+            # Saving the image in npy format
+            image = image_uint8.astype(np.float64) / 255
+            np.save(save_path, image)
+
             # Create the data that will be used for anomaly detection
             row = {
                 "age": ages[t] , 
@@ -100,7 +104,7 @@ if __name__ == "__main__":
             data_image.append(row)
 
             if get_patch:
-                patches, _ = extract_centered_patches(image_uint8.astype(np.float64), patch_size=patch_size)
+                patches, _ = extract_centered_patches(image, patch_size=patch_size)
                 patch_id = (subject) * 2500 
                 f"{anomaly}__starman__subject_s{subject}__tp_{t}.npy"
                 np.save(f"./data_starmen/anomaly_patches/{anomaly}__starman__subject_s{subject}__tp_{t}_patches.npy", patches)
@@ -114,9 +118,6 @@ if __name__ == "__main__":
                 data_patches.append(row)
 
 
-            # Saving the image in npy format
-            image = image_uint8.astype(np.float64) / 255
-            np.save(save_path, image)
 
     # Saving the data in csv file
     data_df_image = pd.DataFrame(data_image)

@@ -21,8 +21,6 @@ from utils.display_individual_observations_2D import project_encodings_for_resul
 from utils.loading_image import open_npy
 
 
-transformations = transforms.Compose([])
-
 
 def compute_stats(all_losses, model, method):
     # If necessary we first transform to numpy array and flatten the list
@@ -146,6 +144,11 @@ if __name__ == "__main__":
     LVAE_nn_saving_path = f"saved_models_2D/best_patch_fold_CVAE2D_{latent_dimension}_{beta}_{gamma}_{train_iter}.pth2"
     longitudinal_saving_path = f"saved_models_2D/best_patch_fold_longitudinal_estimator_params_CVAE2D_{latent_dimension}_{beta}_{gamma}_{train_iter}.json2"
 
+
+    transformations = transforms.Compose([
+            transforms.Lambda(lambda x: x.to(torch.float32))
+            , transforms.Lambda(lambda x: 2*x - 1)
+        ])
 
     ##### LAUNCHING COMPUTATION FOR VAE #####
 

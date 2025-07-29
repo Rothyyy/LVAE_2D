@@ -45,10 +45,10 @@ def patch_to_image(patch_array, patch_size=15):
     patch_num = 0
     for i in range(half, 64-half):
         for j in range(half, 64-half):
-            top = max(i - 15//2, 0)
-            bottom = min(i + 15//2 + 1, 64)
-            left = max(j - 15//2, 0)
-            right = min(j + 15//2 + 1, 64)
+            top = max(i - half, 0)
+            bottom = min(i + half + 1, 64)
+            left = max(j - half, 0)
+            right = min(j + half + 1, 64)
 
             image[top:bottom, left:right] += patch_array[patch_num]
             patch_num += 1
