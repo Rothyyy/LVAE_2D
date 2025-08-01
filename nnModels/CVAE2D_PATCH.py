@@ -183,33 +183,33 @@ class CVAE2D_PATCH_new(nn.Module):
         self.weight_init()
 
     def encoder(self, patch):
-        print("Start encoder")
+        # print("Start encoder")
         h1 = F.gelu(self.bn1(self.conv1(patch)))
-        print("h1 shape =", h1.shape)
+        # print("h1 shape =", h1.shape)
         h2 = F.gelu(self.bn2(self.conv2(h1)))
-        print("h2 shape =", h2.shape)
+        # print("h2 shape =", h2.shape)
         h3 = F.gelu(self.bn3(self.conv3(h2)))
-        print("h3 shape =", h3.shape)
+        # print("h3 shape =", h3.shape)
         mu = F.gelu(self.bn4_mu(self.conv4_mu(h3)))
         logvar = F.gelu(self.bn4_var(self.conv4_var(h3)))
-        print("mu shape =", mu.shape)
-        print("logvar shape =", logvar.shape)
+        # print("mu shape =", mu.shape)
+        # print("logvar shape =", logvar.shape)
         return mu, logvar
 
     def decoder(self, encoded):
-        print("Start decoder")
-        print("Shape encoding =", encoded.shape)
+        # print("Start decoder")
+        # print("Shape encoding =", encoded.shape)
         # h5 = self.fc_decode(encoded).view(-1, 16, 1, 1)
         # print("Shape h5 =", h5.shape)
         h6 = F.gelu(self.bn5(self.deconv1(encoded))) 
-        print("Shape h6 =", h6.shape)
+        # print("Shape h6 =", h6.shape)
         h7 = F.gelu(self.bn6(self.deconv2(h6))) 
-        print("Shape h7 =", h7.shape)
+        # print("Shape h7 =", h7.shape)
         h8 = F.gelu(self.bn7(self.deconv3(h7))) 
-        print("Shape h8 =", h8.shape)
-        # h9 = F.gelu(self.bn8(self.deconv4(h8)))       # VERSION output in [0,1]
-        h9 = F.tanh(self.bn8(self.deconv4(h8)))     # VERSION output in [-1,1]
-        print("Shape h9 =", h9.shape)
+        # print("Shape h8 =", h8.shape)
+        h9 = F.sigmoid(self.bn8(self.deconv4(h8)))       # VERSION output in [0,1]
+        # h9 = F.tanh(self.bn8(self.deconv4(h8)))     # VERSION output in [-1,1]
+        # print("Shape h9 =", h9.shape)
 
         return h9
 

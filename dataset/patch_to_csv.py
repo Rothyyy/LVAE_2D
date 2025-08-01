@@ -21,11 +21,12 @@ def extract_centered_patches(image, patch_size=15):
             patches.append(patch)
             centers.append((i, j))
 
-    return np.array(patches), centers
+    return np.array(patches), np.array(centers)
 
 def get_patch_centers_for_pixel(pixel_coord, image_shape, patch_size):
     """
     For a given pixel coordinate, image shape and patch size.
+    Returns the centers of patches containing that pixel.
     """
     i, j = pixel_coord
     h, w = image_shape
@@ -66,7 +67,7 @@ def get_patch_centers(patch_size=15, image_shape=(64,64)):
 if __name__=="__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--size", "-s", type=int, required=False, default=15)
-    parser.add_argument("-threshold_pixel","-t", type=float, required=False, default=1)
+    parser.add_argument("-pixel_threshold","-t", type=float, required=False, default=1)
     args = parser.parse_args()
 
     patch_size = args.size
@@ -79,16 +80,14 @@ if __name__=="__main__":
 
     # Process data to get a csv file 
     data = []
-    patch_id = 0
     black_patch_threshold = np.ones((patch_size, patch_size)) * 1e-6
-    num_pixel_threshold = args.threshold_pixel
+    num_pixel_threshold = args.pixel_threshold
 
     for patient_id in range(1000):  # For every subject
 
         print("Patient :", patient_id)
-        image_patches = np.zeros((10, num_patch, patch_size, patch_size))
-        num_not_black_pixel = np.zeros((10, num_patch))
-        not_black_patch_indices = np.zeros((10, num_patch), dtype=bool)
+        # num_not_black_pixel_in_patch = np.zeros((num_patch))
+        # not_black_patch_indices = np.zeros((num_patch), dtype=bool)
 
         for t in range(10):     # For every timestamp
             
@@ -98,27 +97,20 @@ if __name__=="__main__":
             patches, centers = extract_centered_patches(image, patch_size)
 
             # Store patches and check if patch are black or not
-            image_patches[t] = patches
-            num_not_black_pixel[t] = np.sum((patches > black_patch_threshold), axis=(1,2))
-            not_black_patch_indices[t] = num_not_black_pixel[t] >= num_pixel_threshold
-        
-        not_black_patch_indices = np.where(not_black_patch_indices.any(0))[0]
-        num_not_black_patch = not_black_patch_indices.shape[0]
+            num_not_black_pixel_in_patch = np.sum((patches > black_patch_threshold), axis=(1,2))
+            not_black_patch_indices = num_not_black_pixel_in_patch >= num_pixel_threshold
 
-        # TODO: Probably better way to do this than 2 for loops
-        for t in range(10):        
             # Store the information in a row
-            np.save(f"./data_starmen/images_patch/Starman__subject_s{patient_id}__tp_{t}_patches.npy", image_patches[t, not_black_patch_indices])
+            np.save(f"./data_starmen/images_patch/Starman__subject_s{patient_id}__tp_{t}_patches.npy", patches[not_black_patch_indices])
+            np.save(f"./data_starmen/images_patch/Starman__subject_s{patient_id}_tp{t}_centers.npy", centers[not_black_patch_indices])
             row = {
                 "subject_id": str(patient_id),
-                "patch_id_min": patch_id,
-                "patch_id_max": patch_id + num_not_black_patch - 1,
                 "age": ages[patient_id*10 + t],
                 "patch_path": f"./data_starmen/images_patch/Starman__subject_s{patient_id}__tp_{t}_patches.npy",
+                "centers_path": f"./data_starmen/images_patch/Starman__subject_s{patient_id}_tp{t}_centers.npy"
             }
             data.append(row)
 
-        patch_id += num_not_black_patch
             
 
     data_df = pd.DataFrame(data)
