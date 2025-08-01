@@ -73,12 +73,12 @@ if __name__=="__main__":
 
             # Store the information in a row
             np.save(f"./data_starmen/images_patch/Starman__subject_s{patient_id}__tp_{t}_patches.npy", patches)
-            # np.save(f"./data_starmen/images_patch/Starman__subject_s{patient_id}_tp{t}_centers.npy", centers)
+            np.save(f"./data_starmen/images_patch/Starman__subject_s{patient_id}_tp{t}_centers.npy", centers)
             row = {
                 "subject_id": str(patient_id),
                 "age": ages[patient_id*10 + t],
                 "patch_path": f"./data_starmen/images_patch/Starman__subject_s{patient_id}__tp_{t}_patches.npy",
-                # "centers_path": f"./data_starmen/images_patch/Starman__subject_s{patient_id}_tp{t}_centers.npy"
+                "centers_path": f"./data_starmen/images_patch/Starman__subject_s{patient_id}_tp{t}_centers.npy"
             }
             data.append(row)
 
