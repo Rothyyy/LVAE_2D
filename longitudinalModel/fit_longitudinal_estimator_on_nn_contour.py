@@ -10,14 +10,13 @@ def fit_longitudinal_estimator_on_nn_patch_contour(data_loader, model, device, l
         times = []
         patch_ids = []
         for data in data_loader:
-            patches = data[0].to(device)
             time_patch = data[1]
             subject_ids = data[2]
             centers_list = data[3]
             batch_size = len(centers_list)
             
-            output_encodings = model.encoder(patches)[0].detach().clone().to(device)
-            encodings.append(output_encodings)
+            encodings_output = model.encoder(data[0].float().to(device))[0].detach().clone().to(device)
+            encodings.append(encodings_output.view(encodings_output.size(0), encodings_output.size(1)))
 
             for i in range(batch_size):
                 for t in range(10):
@@ -25,7 +24,7 @@ def fit_longitudinal_estimator_on_nn_patch_contour(data_loader, model, device, l
                     times.extend([time_patch[i][t]] * number_patches)
                     for patch in range(number_patches):
                         center_coord_x, center_coord_y = centers_list[i][t][patch]
-                        patch_id = f"s_{subject_ids[i]}_{center_coord_x}_{center_coord_y}"
+                        patch_id = f"s_{subject_ids[i]}_{int(center_coord_x)}_{int(center_coord_y)}"
                         patch_ids.append(patch_id)
                 
         encodings = torch.cat(encodings)
@@ -58,21 +57,21 @@ def fit_longitudinal_estimator_on_nn_patch_contour_v1(data, model, device, longi
         times = []
         patch_ids = []
 
-        patches = data[0].to(device)
         time_patch = data[1]
         subject_ids = data[2]
         centers_list = data[3]
         batch_size = len(centers_list)
 
-        output_encodings = model.encoder(patches)[0].detach().clone().to(device)
-        encodings.append(output_encodings)
+        encodings_output = model.encoder(data[0].float().to(device))[0].detach().clone().to(device)
+        encodings.append(encodings_output.view(encodings_output.size(0), encodings_output.size(1)))
+        
         for i in range(batch_size):
             for t in range(10):
                 number_patches = len(centers_list[i][t])
                 times.extend([time_patch[i][t]] * number_patches)
                 for patch in range(number_patches):
                     center_coord_x, center_coord_y = centers_list[i][t][patch]
-                    patch_id = f"s_{subject_ids[i]}_{center_coord_x}_{center_coord_y}"
+                    patch_id = f"s_{subject_ids[i]}_{int(center_coord_x)}_{int(center_coord_y)}"
                     patch_ids.append(patch_id)
 
         # WARNING: If in the sample there are crops at different position for a same individual then
@@ -111,14 +110,13 @@ def fit_longitudinal_estimator_on_nn_patch_contour_v2(data_loader, model, device
         patch_ids = []
 
         for data in data_loader:
-            patches = data[0].to(device)
             time_patch = data[1]
             subject_ids = data[2]
             centers_list = data[3]
             batch_size = len(centers_list)
             
-            output_encodings = model.encoder(patches)[0].detach().clone().to(device)
-            encodings.append(output_encodings)
+            encodings_output = model.encoder(data[0].float().to(device))[0].detach().clone().to(device)
+            encodings.append(encodings_output.view(encodings_output.size(0), encodings_output.size(1)))
 
             for i in range(batch_size):
                 for t in range(10):
@@ -126,7 +124,7 @@ def fit_longitudinal_estimator_on_nn_patch_contour_v2(data_loader, model, device
                     times.extend([time_patch[i][t]] * number_patches)
                     for patch in range(number_patches):
                         center_coord_x, center_coord_y = centers_list[i][t][patch]
-                        patch_id = f"s_{subject_ids[i]}_{center_coord_x}_{center_coord_y}"
+                        patch_id = f"s_{subject_ids[i]}_{int(center_coord_x)}_{int(center_coord_y)}"
                         patch_ids.append(patch_id)
 
         # WARNING: If in the sample there are crops at different position for a same individual then

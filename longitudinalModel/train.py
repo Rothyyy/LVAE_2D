@@ -54,7 +54,7 @@ def train(model, data_loader, longitudinal_estimator=None,
     :args: lr: learning rate of the neural network model
     :args: device: device used to do the variational autoencoder training
     """
-    model.to(device)
+    model = model.to(device)
     model.device = device
     best_loss = previous_best_loss
     optimizer = optim.Adam(filter(lambda p: p.requires_grad, model.parameters()))
@@ -180,7 +180,7 @@ def train_kfold(model_type, path_best_fold_model, k_folds_index_list,
         model.beta = beta
         model.load_state_dict(torch.load(path_best_fold_model, map_location='cpu'))
         model.device = device
-        model.to(device)
+        model = model.to(device)
 
         # if freeze == "freeze_conv":
         #     model.freeze_conv()
@@ -319,7 +319,7 @@ def train_kfold_patch(model_type, path_best_fold_model, k_folds_index_list,
         model.beta = beta
         model.load_state_dict(torch.load(path_best_fold_model, map_location='cpu'))
         model.device = device
-        model.to(device)
+        model = model.to(device)
 
         longitudinal_estimator = Leaspy("linear", noise_model="gaussian_diagonal", source_dimension=latent_dimension - 1)
 
@@ -351,7 +351,7 @@ def train_kfold_patch(model_type, path_best_fold_model, k_folds_index_list,
             ### Fit the longitudinal mixed effect model
             longitudinal_estimator, encodings_df = fit_longitudinal_estimator_on_nn_patch_contour(train_data_loader, model, device,
                                                                                         longitudinal_estimator,
-                                                                                        longitudinal_estimator_settings, patch_size=15)
+                                                                                        longitudinal_estimator_settings)
             timepoints_of_projection, predicted_latent_variables = project_encodings_for_training(encodings_df,
                                                                                                 longitudinal_estimator)
             
@@ -455,7 +455,7 @@ def train_kfold_patch_v1(model_type, path_best_fold_model, k_folds_index_list,
         model.beta = beta
         model.load_state_dict(torch.load(path_best_fold_model, map_location='cpu'))
         model.device = device
-        model.to(device)
+        model = model.to(device)
 
         longitudinal_estimator = Leaspy("linear", noise_model="gaussian_diagonal", source_dimension=latent_dimension - 1)
 
@@ -491,7 +491,7 @@ def train_kfold_patch_v1(model_type, path_best_fold_model, k_folds_index_list,
             for data in train_data_loader:
                 longitudinal_estimator, encodings_df = fit_longitudinal_estimator_on_nn_patch_contour_v1(data, model, device,
                                                                                                 longitudinal_estimator,
-                                                                                                longitudinal_estimator_settings, patch_size=15)
+                                                                                                longitudinal_estimator_settings)
                 timepoints_of_projection, predicted_latent_variables = project_encodings_for_training(encodings_df,
                                                                                                 longitudinal_estimator)
                 nb_batch += 1
@@ -636,7 +636,7 @@ def train_kfold_patch_v2(model_type, path_best_fold_model, k_folds_index_list,
             ### Fit the longitudinal mixed effect model
             longitudinal_estimator, encodings_df = fit_longitudinal_estimator_on_nn_patch_contour_v2(loader, model, device,
                                                                                         longitudinal_estimator,
-                                                                                        longitudinal_estimator_settings, patch_size=15)
+                                                                                        longitudinal_estimator_settings)
             timepoints_of_projection, predicted_latent_variables = project_encodings_for_training(encodings_df,
                                                                                                 longitudinal_estimator)
             
