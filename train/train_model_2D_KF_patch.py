@@ -9,10 +9,8 @@ import argparse
 import os
 
 from dataset.Dataset2D import Dataset2D_patch
-from longitudinalModel.fit_longitudinal_estimator_on_nn import fit_longitudinal_estimator_on_nn
 from longitudinalModel.train import train, train_kfold_patch, train_kfold_patch_v1, train_kfold_patch_v2
 
-from longitudinalModel.fit_longitudinal_estimator_on_nn_contour import fit_longitudinal_estimator_on_nn_contour
 
 from dataset.group_based_train_test_split import group_based_train_test_split
 from dataset.split_k_folds import train_k_folds_split_patch
@@ -22,7 +20,8 @@ from nnModels.losses import spatial_auto_encoder_loss
 
 from utils.display_individual_observations_2D import display_individual_observations_2D
 from utils.loading_image import open_npy
-from dataset.LongitudinalDataset2D_patch import LongitudinalDataset2D_patch, longitudinal_collate_2D_patch
+# from dataset.LongitudinalDataset2D_patch import LongitudinalDataset2D_patch, longitudinal_collate_2D_patch
+from dataset.LongitudinalDataset2D_patch_contour import LongitudinalDataset2D_patch_contour, longitudinal_collate_2D_patch_contour
 from nnModels.train_AE import train_AE_kfold
 from train.cross_validation import CV_VAE, CV_LVAE
 """

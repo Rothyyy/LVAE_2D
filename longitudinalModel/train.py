@@ -20,7 +20,8 @@ from leaspy import Leaspy, AlgorithmSettings
 import torchvision.transforms as transforms
 from torch.utils.data import DataLoader
 from dataset.LongitudinalDataset2D import LongitudinalDataset2D, longitudinal_collate_2D
-from dataset.LongitudinalDataset2D_patch import LongitudinalDataset2D_patch, longitudinal_collate_2D_patch
+# from dataset.LongitudinalDataset2D_patch import LongitudinalDataset2D_patch, longitudinal_collate_2D_patch
+from dataset.LongitudinalDataset2D_patch_contour import LongitudinalDataset2D_patch_contour, longitudinal_collate_2D_patch_contour
 
 from utils.loading_image import open_npy
 
@@ -333,11 +334,11 @@ def train_kfold_patch(model_type, path_best_fold_model, k_folds_index_list,
         train_df = pd.concat([ folds_df_list[i] for i in range(len(folds_df_list)) if i != valid_index ], ignore_index=True)
         
         # Loading them in the Dataset2D class and create DataLoader
-        train_dataset = LongitudinalDataset2D_patch(train_df, transform=transformations)
-        valid_dataset = LongitudinalDataset2D_patch(valid_df, transform=transformations)
+        train_dataset = LongitudinalDataset2D_patch_contour(train_df, transform=transformations)
+        valid_dataset = LongitudinalDataset2D_patch_contour(valid_df, transform=transformations)
 
-        train_data_loader = DataLoader(train_dataset, batch_size=batch_size, num_workers=num_workers, shuffle=False, pin_memory=True, collate_fn=longitudinal_collate_2D_patch)
-        valid_data_loader = DataLoader(valid_dataset, batch_size=batch_size, num_workers=num_workers, shuffle=False, pin_memory=True, collate_fn=longitudinal_collate_2D_patch)
+        train_data_loader = DataLoader(train_dataset, batch_size=batch_size, num_workers=num_workers, shuffle=False, pin_memory=True, collate_fn=longitudinal_collate_2D_patch_contour)
+        valid_data_loader = DataLoader(valid_dataset, batch_size=batch_size, num_workers=num_workers, shuffle=False, pin_memory=True, collate_fn=longitudinal_collate_2D_patch_contour)
 
         for epoch in iterator:
                 
@@ -469,11 +470,11 @@ def train_kfold_patch_v1(model_type, path_best_fold_model, k_folds_index_list,
         train_df = pd.concat([ folds_df_list[i] for i in range(len(folds_df_list)) if i != valid_index ], ignore_index=True)
         
         # Loading them in the Dataset2D class and create DataLoader
-        train_dataset = LongitudinalDataset2D_patch(train_df, transform=transformations)
-        valid_dataset = LongitudinalDataset2D_patch(valid_df, transform=transformations)
+        train_dataset = LongitudinalDataset2D_patch_contour(train_df, transform=transformations)
+        valid_dataset = LongitudinalDataset2D_patch_contour(valid_df, transform=transformations)
 
-        train_data_loader = DataLoader(train_dataset, batch_size=batch_size, num_workers=num_workers, shuffle=False, pin_memory=True, collate_fn=longitudinal_collate_2D_patch)
-        valid_data_loader = DataLoader(valid_dataset, batch_size=batch_size, num_workers=num_workers, shuffle=False, pin_memory=True, collate_fn=longitudinal_collate_2D_patch)
+        train_data_loader = DataLoader(train_dataset, batch_size=batch_size, num_workers=num_workers, shuffle=False, pin_memory=True, collate_fn=longitudinal_collate_2D_patch_contour)
+        valid_data_loader = DataLoader(valid_dataset, batch_size=batch_size, num_workers=num_workers, shuffle=False, pin_memory=True, collate_fn=longitudinal_collate_2D_patch_contour)
 
         for epoch in iterator:
                 
@@ -612,11 +613,11 @@ def train_kfold_patch_v2(model_type, path_best_fold_model, k_folds_index_list,
         train_df = pd.concat([ folds_df_list[i] for i in range(len(folds_df_list)) if i != valid_index ], ignore_index=True)
         
         # Loading them in the Dataset2D class and create DataLoader
-        train_dataset = LongitudinalDataset2D_patch(train_df, transform=transformations)
-        valid_dataset = LongitudinalDataset2D_patch(valid_df, transform=transformations)
+        train_dataset = LongitudinalDataset2D_patch_contour(train_df, transform=transformations)
+        valid_dataset = LongitudinalDataset2D_patch_contour(valid_df, transform=transformations)
 
-        train_data_loader = DataLoader(train_dataset, batch_size=batch_size, num_workers=num_workers, shuffle=False, pin_memory=True, collate_fn=longitudinal_collate_2D_patch)
-        valid_data_loader = DataLoader(valid_dataset, batch_size=batch_size, num_workers=num_workers, shuffle=False, pin_memory=True, collate_fn=longitudinal_collate_2D_patch)
+        train_data_loader = DataLoader(train_dataset, batch_size=batch_size, num_workers=num_workers, shuffle=False, pin_memory=True, collate_fn=longitudinal_collate_2D_patch_contour)
+        valid_data_loader = DataLoader(valid_dataset, batch_size=batch_size, num_workers=num_workers, shuffle=False, pin_memory=True, collate_fn=longitudinal_collate_2D_patch_contour)
 
         chunk_size = int(0.1 * len(train_dataset))  # 10%
         total_chunks = len(train_dataset) // chunk_size + (len(train_dataset) % chunk_size > 0)
@@ -625,7 +626,7 @@ def train_kfold_patch_v2(model_type, path_best_fold_model, k_folds_index_list,
                 
             chunk_idx = epoch % total_chunks  # cycles through chunks
             subset = get_chunk(train_dataset, chunk_idx, chunk_size)
-            loader = DataLoader(subset, batch_size=batch_size, shuffle=False, pin_memory=True, collate_fn=longitudinal_collate_2D_patch)
+            loader = DataLoader(subset, batch_size=batch_size, shuffle=False, pin_memory=True, collate_fn=longitudinal_collate_2D_patch_contour)
             nb_batch = 0
             model.training = True 
             model.train()
