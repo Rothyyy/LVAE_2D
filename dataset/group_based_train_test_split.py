@@ -26,6 +26,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
     
     if args.patch in ["True", "y"]:
+        print("IN patch split")
         dataset_path = "data_csv/starmen_dataset_patch.csv"
         dataset_df = pd.read_csv(dataset_path)
         train_df, test_df = group_based_train_test_split(dataset_df, test_size=0.2, group_col='subject_id', random_state=42)

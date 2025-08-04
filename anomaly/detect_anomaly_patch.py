@@ -14,7 +14,7 @@ from dataset.Dataset2D import Dataset2D_patch
 from longitudinalModel.fit_longitudinal_estimator_on_nn import fit_longitudinal_estimator_on_nn
 from dataset.group_based_train_test_split import group_based_train_test_split
 
-from nnModels.CVAE2D_PATCH import CVAE2D_PATCH
+from nnModels.CVAE2D_PATCH import CVAE2D_PATCH, CVAE2D_PATCH_16, CVAE2D_PATCH_32, CVAE2D_PATCH_3latent64, CVAE2D_PATCH_3latent32, CVAE2D_PATCH_7
 from nnModels.losses import image_reconstruction_error_patch, pixel_reconstruction_error
 
 from utils.display_individual_observations_2D import project_encodings_for_results
@@ -96,7 +96,16 @@ if __name__=="__main__":
     with open(threshold_path) as json_file:
         threshold_dict = json.load(json_file)
 
-    
+    if latent_dimension == 332:
+        model_type = CVAE2D_PATCH_3latent32
+    elif latent_dimension == 32:
+        model_type = CVAE2D_PATCH_32
+    elif latent_dimension == 364:
+        model_type = CVAE2D_PATCH_3latent64
+    elif latent_dimension == 7:
+        model_type = CVAE2D_PATCH_7
+    else:
+        model_type = CVAE2D_PATCH_16
 
     ######## TEST WITH VAE ########
     print(f"Start anomaly detection : anomaly={anomaly}, latent dimension={latent_dimension}")
@@ -107,7 +116,7 @@ if __name__=="__main__":
     longitudinal_saving_path = f"saved_models_2D/best_patch_fold_longitudinal_estimator_params_CVAE2D_{latent_dimension}_{beta}_{gamma}_{iterations}.json2"
   
     # Loading VAE model
-    model_VAE = CVAE2D_PATCH(latent_dimension)
+    model_VAE = model_type(latent_dimension)
     model_VAE.load_state_dict(torch.load(model_VAE_path, map_location='cpu'))
     model_VAE = model_VAE.to(device)
     model_VAE.eval()
@@ -116,7 +125,7 @@ if __name__=="__main__":
 
 
     # # Loading LVAE model
-    # model_LVAE = CVAE2D_PATCH(latent_dimension)
+    # model_LVAE = model_type(latent_dimension)
     # model_LVAE.load_state_dict(torch.load(model_LVAE_path, map_location='cpu'))
     # model_LVAE = model_LVAE.to(device)
     # model_LVAE.eval()
@@ -126,11 +135,11 @@ if __name__=="__main__":
 
 
     # Loading anomaly dataset and thresholds
-    # transformations = transforms.Compose([])
-    transformations = transforms.Compose([
-            transforms.Lambda(lambda x: x.to(torch.float32))
-            , transforms.Lambda(lambda x: 2*x - 1)
-        ])
+    transformations = transforms.Compose([])
+    # transformations = transforms.Compose([
+    #         transforms.Lambda(lambda x: x.to(torch.float32))
+    #         , transforms.Lambda(lambda x: 2*x - 1)
+    #     ])
     dataset = LongitudinalDataset2D_patch(anomaly_dataset_path, read_image=open_npy, transform=transformations)
     data_loader = DataLoader(dataset, batch_size=1, num_workers=num_workers, pin_memory=True, collate_fn=longitudinal_collate_2D_patch, shuffle=False)
     

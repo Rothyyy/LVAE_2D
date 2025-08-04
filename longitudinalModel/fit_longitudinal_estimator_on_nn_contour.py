@@ -10,25 +10,30 @@ def fit_longitudinal_estimator_on_nn_contour(data_loader, model, device, longitu
         times = []
         ids = []
         for data in data_loader:
-            encodings.append(model.encoder(data[0].float().to(device))[0]
-                             .detach().clone().to(device)
-                            )
-            for i in range(len(data[1])):
-                times.extend(data[1][i])
-                ids.extend([data[2][i]] * len(data[1][i]))
-        # print(encodings[0].size(),encodings[0], encodings[1])
+            patches = data[0].to(device)
+            time_patch = data[1]
+            subject_ids = data[2]
+            centers_list = data[3]
+            batch_size = len(centers_list)
+            
+            output_encodings = model.encoder(patches)[0].detach().clone().to(device)
+            encodings.append(output_encodings)
 
-        # WARNING: If in the sample there are crops at different position for a same individual then
-        # the algorithm is not capable of being trained on it
+            for i in range(batch_size):
+                for t in range(10):
+                    number_patches = len(centers_list[i][t])
+                    times.extend([time_patch[i][t]] * number_patches)
+                    for patch in range(number_patches):
+                        center_coord_x, center_coord_y = centers_list[i][t][patch]
+                        patch_id = f"s_{subject_ids[i]}_{center_coord_x}_{center_coord_y}"
+                        ids.append(patch_id)
+                
         encodings = torch.cat(encodings)
         encodings_df = pd.DataFrame({'ID': ids, 'TIME': times})
         for i in range(encodings.shape[1]):
             encodings_df.insert(len(encodings_df.columns), f"ENCODING{i}",
                                 encodings[:, i].detach().clone().tolist())
         encodings_df['ID'] = encodings_df['ID'].astype(str)
-        # print(encodings_df.head())
-        # encodings_df.to_csv("encodings.csv",
-        #                     index_label=False)  # TODO: think about whether it's really useful
 
     try:
         encodings_data = Data.from_dataframe(encodings_df)
@@ -41,9 +46,7 @@ def fit_longitudinal_estimator_on_nn_contour(data_loader, model, device, longitu
             longitudinal_estimator.fit(encodings_data, longitudinal_estimator_settings)
         except:
             print()
-            print("Error in dimension features")
-            print("Model features:", longitudinal_estimator.model.features)
-            print("Data features:", encodings_data.headers)
+            print("Error in fit")
     return longitudinal_estimator, encodings_df
 
 
@@ -177,3 +180,6 @@ def fit_longitudinal_estimator_on_nn_patch_v2(data_loader, model, device, longit
             print("Model features:", longitudinal_estimator.model.features)
             print("Data features:", encodings_data.headers)
     return longitudinal_estimator, encodings_df
+
+
+

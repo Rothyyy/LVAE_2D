@@ -36,7 +36,7 @@ class LongitudinalDataset2D_patch_contour(Dataset):
         patches = [self.read_image(summary_rows.iloc[i]['patch_path']) for i in range(len(summary_rows))]
         patches = torch.cat(patches, dim=0)
         centers = [np.load(summary_rows.iloc[i]['centers_path']) for i in range(len(summary_rows))]
-        centers = np.concatenate(centers)
+        # centers = np.concatenate(centers)
         if len(patches) == 0:
             return None, None, None, None
 

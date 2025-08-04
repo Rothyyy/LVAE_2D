@@ -6,8 +6,8 @@ import os
 
 def extract_centered_patches_from_contour(image, contour_mask, patch_size=15):
     """
-    This functions takes as input an image (numpy array) and the patch size.
-    It returns the patches centered in every pixel not in the border and the coordinates of its center.
+    This functions takes as input an image (numpy array), the filled contour mask and the patch size.
+    It returns the patches centered in every pixel of the filled contour and the coordinates of its center.
     """
     assert patch_size % 2 == 1, "Patch size must be odd."
     h, w = image.shape[:2]
@@ -20,7 +20,7 @@ def extract_centered_patches_from_contour(image, contour_mask, patch_size=15):
     for i in range(half, h - half):
         for j in range(half, w - half):
             if contour_mask[i,j] > 0:
-                patch = image[i - half: i + half + 1, j - half: j + half + 1]  # (h, w)
+                patch = image[i - half: i + half + 1, j - half: j + half + 1] 
                 patches[patch_id] = patch
                 centers[patch_id] = [i, j]
                 patch_id += 1
@@ -56,7 +56,7 @@ if __name__=="__main__":
             path_image = f"./data_starmen/images/SimulatedData__Reconstruction__starman__subject_s{patient_id}__tp_{t}.npy"
             image = (np.load(path_image) * 255).astype(np.uint8)
 
-            # Threshold the image or use Canny or other preprocessing if needed
+            # Threshold the image
             _, thresh = cv2.threshold(image, 100, 255, cv2.THRESH_BINARY)
 
             # Find contours

@@ -133,7 +133,7 @@ class CVAE2D_PATCH(nn.Module):
 
 
 
-class CVAE2D_PATCH_new(nn.Module):
+class CVAE2D_PATCH_16(nn.Module):
     """
     Convolutional 2D variational autoencoder, used to test the method.
     :attr: beta: regularisation term of the variational autoencoder. Increasing gamma gives more importance to the KL
@@ -144,7 +144,7 @@ class CVAE2D_PATCH_new(nn.Module):
     """
 
     def __init__(self, latent_representation_size, device=torch.device('cuda' if torch.cuda.is_available() else 'cpu')):
-        super(CVAE2D_PATCH_new, self).__init__()
+        super(CVAE2D_PATCH_16, self).__init__()
         nn.Module.__init__(self)
         self.beta = 5
         self.gamma = 100
@@ -214,7 +214,7 @@ class CVAE2D_PATCH_new(nn.Module):
         return h9
 
     def to(self, *args, **kwargs):
-        new_self = super(CVAE2D_PATCH_new, self).to(*args, **kwargs)
+        new_self = super(CVAE2D_PATCH_16, self).to(*args, **kwargs)
         device = next(self.parameters()).device
         self.device = device
         return new_self
@@ -333,7 +333,7 @@ class CVAE2D_PATCH_7(nn.Module):
         return h8
 
     def to(self, *args, **kwargs):
-        new_self = super(CVAE2D_PATCH_new, self).to(*args, **kwargs)
+        new_self = super(CVAE2D_PATCH_7, self).to(*args, **kwargs)
         device = next(self.parameters()).device
         self.device = device
         return new_self
@@ -379,7 +379,7 @@ class CVAE2D_PATCH_7(nn.Module):
             [self.conv1, self.conv2, self.conv3, self.upconv1, self.upconv2, self.upconv3])
 
 
-class CVAE2D_PATCH_4latent32(nn.Module):
+class CVAE2D_PATCH_32(nn.Module):
     """
     Convolutional 2D variational autoencoder, used to test the method.
     :attr: beta: regularisation term of the variational autoencoder. Increasing gamma gives more importance to the KL
@@ -389,8 +389,8 @@ class CVAE2D_PATCH_4latent32(nn.Module):
     :attr: name: name of the model
     """
 
-    def __init__(self, latent_representation_size, device=torch.device('cuda' if torch.cuda.is_available() else 'cpu')):
-        super(CVAE2D_PATCH_4latent32, self).__init__()
+    def __init__(self, latent_representation_size=32, device=torch.device('cuda' if torch.cuda.is_available() else 'cpu')):
+        super(CVAE2D_PATCH_32, self).__init__()
         nn.Module.__init__(self)
         self.beta = 5
         self.gamma = 100
@@ -459,7 +459,7 @@ class CVAE2D_PATCH_4latent32(nn.Module):
         return h9
 
     def to(self, *args, **kwargs):
-        new_self = super(CVAE2D_PATCH_4latent32, self).to(*args, **kwargs)
+        new_self = super(CVAE2D_PATCH_32, self).to(*args, **kwargs)
         device = next(self.parameters()).device
         self.device = device
         return new_self
@@ -539,11 +539,8 @@ class CVAE2D_PATCH_3latent32(nn.Module):
         self.conv2 = nn.Conv2d(8, 16, kernel_size=3, stride=2)       # [16, 3, 3]
         self.conv3_mu = nn.Conv2d(16, 32, kernel_size=3, stride=2)   # [32, 1 ,1]
         self.conv3_var = nn.Conv2d(16, 32, kernel_size=3, stride=2)  # [32, 1 ,1]
-
         self.bn1 = nn.BatchNorm2d(8)
         self.bn2 = nn.BatchNorm2d(16)
-        # self.bn3_mu = nn.BatchNorm2d(32)
-        # self.bn3_var = nn.BatchNorm2d(32)
 
         # Decoder
         self.deconv1 = nn.ConvTranspose2d(32, 16, kernel_size=3, stride=2)   # [16, 3, 3]
@@ -555,31 +552,147 @@ class CVAE2D_PATCH_3latent32(nn.Module):
         self.weight_init()
 
     def encoder(self, patch):
-        print("Start encoder")
+        # print("Start encoder")
         h1 = F.gelu(self.bn1(self.conv1(patch)))
-        print("h1 shape =", h1.shape)
+        # print("h1 shape =", h1.shape)
         h2 = F.gelu(self.bn2(self.conv2(h1)))
-        print("h2 shape =", h2.shape)
+        # print("h2 shape =", h2.shape)
         mu = F.gelu(self.conv3_mu(h2))
         logvar = F.gelu(self.conv3_var(h2))
-        print("mu shape =", mu.shape)
-        print("logvar shape =", logvar.shape)
+        # print("mu shape =", mu.shape)
+        # print("logvar shape =", logvar.shape)
         return mu, logvar
 
     def decoder(self, encoded):
-        print("Start decoder")
-        print("Shape encoding =", encoded.shape)
+        # print("Start decoder")
+        # print("Shape encoding =", encoded.shape)
         h6 = F.gelu(self.bn5(self.deconv1(encoded))) 
-        print("Shape h6 =", h6.shape)
+        # print("Shape h6 =", h6.shape)
         h7 = F.gelu(self.bn6(self.deconv2(h6))) 
-        print("Shape h7 =", h7.shape)
+        # print("Shape h7 =", h7.shape)
         h8 = F.sigmoid(self.deconv3(h7))
-        print("Shape h8 =", h8.shape)
+        # print("Shape h8 =", h8.shape)
 
         return h8
 
     def to(self, *args, **kwargs):
         new_self = super(CVAE2D_PATCH_3latent32, self).to(*args, **kwargs)
+        device = next(self.parameters()).device
+        self.device = device
+        return new_self
+
+    def reparametrize(self, mu, logVar):
+        std = logVar.div(2).exp()
+        eps = Variable(std.data.new(std.size()).normal_())
+        return mu + std * eps
+
+    def forward(self, image):
+        # print("Start forward")
+        mu, logVar = self.encoder(image)
+        if self.training:
+            encoded = self.reparametrize(mu, logVar)
+        else:
+            encoded = mu
+        reconstructed = self.decoder(encoded)
+        return mu, logVar, reconstructed, encoded
+
+
+    def weight_init(self):
+        for block in self._modules:
+            for m in self._modules[block].modules():
+                nnModels_utils.kaiming_init(m)
+
+    def freeze_conv(self):
+        """
+        Freezes the convolutional layers.
+        """
+        # TODO: freeze bn as well ,
+        nnModels_utils.freeze(
+            [self.conv1, self.conv2, self.conv3, self.upconv1, self.upconv2, self.upconv3])
+    
+    def freeze_all(self):
+        """
+        Freezes the convolutional layers.
+        """
+        # TODO: freeze bn as well ,
+        nnModels_utils.freeze(
+            [self.conv1, self.conv2, self.conv3, self.upconv1, self.upconv2, self.upconv3, self.bn1, self.bn2, self.bn3, self.bn4, self.bn5])
+
+    def unfreeze_conv(self):
+        nnModels_utils.unfreeze(
+            [self.conv1, self.conv2, self.conv3, self.upconv1, self.upconv2, self.upconv3])
+
+
+class CVAE2D_PATCH_3latent64(nn.Module):
+    """
+    Convolutional 2D variational autoencoder, used to test the method.
+    :attr: beta: regularisation term of the variational autoencoder. Increasing gamma gives more importance to the KL
+    divergence term in the loss.
+    :attr: gamma: Hyperparameter fixing the importance of the alignment loss in the total loss.
+    :attr: latent_representation_size: size of the encoding given by the variational autoencoder
+    :attr: name: name of the model
+    """
+
+    def __init__(self, latent_representation_size=64, device=torch.device('cuda' if torch.cuda.is_available() else 'cpu')):
+        super(CVAE2D_PATCH_3latent64, self).__init__()
+        nn.Module.__init__(self)
+        self.beta = 5
+        self.gamma = 100
+        self.lr = 1e-4  # For epochs between MCMC steps
+        self.epoch = 0  # For tensorboard to keep track of total number of epochs
+        self.name = 'CVAE_2D_PATCH'
+
+
+        """nn.Conv2d(1, 8, kernel_size=3, stride=2),   # 15x15 → 7x7
+        nn.ReLU(),
+        nn.Conv2d(8, 16, kernel_size=3, stride=2),  # 7x7 → 3x3
+        nn.ReLU(),
+        nn.Conv2d(16, 32, kernel_size=3, stride=2), # 3x3 → 1x1
+        nn.ReLU()"""
+        
+        # Encoder
+        self.conv1 = nn.Conv2d(1, 16, kernel_size=3, stride=2, padding=1)       # [16, 8, 8]
+        self.conv2 = nn.Conv2d(16, 32, kernel_size=3, stride=2, padding=1)      # [32, 4, 4]
+        self.conv3_mu = nn.Conv2d(32, 64, kernel_size=4, stride=1)   # [64, 1 ,1]
+        self.conv3_var = nn.Conv2d(32, 64, kernel_size=4, stride=1)  # [64, 1 ,1]
+        self.bn1 = nn.BatchNorm2d(16)
+        self.bn2 = nn.BatchNorm2d(32)
+
+        # Decoder
+        self.deconv1 = nn.ConvTranspose2d(64, 32, kernel_size=4, stride=1)   # [32, 4, 4]
+        self.deconv2 = nn.ConvTranspose2d(32, 16, kernel_size=3, stride=2, padding=1, output_padding=1)    # [16, 8, 8]
+        self.deconv3 = nn.ConvTranspose2d(16, 1, kernel_size=3, stride=2, padding=1)     # [1, 15, 15]
+        self.bn5 = nn.BatchNorm2d(32)
+        self.bn6 = nn.BatchNorm2d(16)
+
+        self.weight_init()
+
+    def encoder(self, patch):
+        # print("Start encoder")
+        h1 = F.gelu(self.bn1(self.conv1(patch)))
+        # print("h1 shape =", h1.shape)
+        h2 = F.gelu(self.bn2(self.conv2(h1)))
+        # print("h2 shape =", h2.shape)
+        mu = F.gelu(self.conv3_mu(h2))
+        logvar = F.gelu(self.conv3_var(h2))
+        # print("mu shape =", mu.shape)
+        # print("logvar shape =", logvar.shape)
+        return mu, logvar
+
+    def decoder(self, encoded):
+        # print("Start decoder")
+        # print("Shape encoding =", encoded.shape)
+        h6 = F.gelu(self.bn5(self.deconv1(encoded))) 
+        # print("Shape h6 =", h6.shape)
+        h7 = F.gelu(self.bn6(self.deconv2(h6))) 
+        # print("Shape h7 =", h7.shape)
+        h8 = F.sigmoid(self.deconv3(h7))
+        # print("Shape h8 =", h8.shape)
+
+        return h8
+
+    def to(self, *args, **kwargs):
+        new_self = super(CVAE2D_PATCH_3latent64, self).to(*args, **kwargs)
         device = next(self.parameters()).device
         self.device = device
         return new_self

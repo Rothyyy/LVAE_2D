@@ -14,7 +14,7 @@ from dataset.LongitudinalDataset2D_patch import LongitudinalDataset2D_patch, lon
 
 from longitudinalModel.fit_longitudinal_estimator_on_nn import fit_longitudinal_estimator_on_nn
 
-from nnModels.CVAE2D_PATCH import CVAE2D_PATCH
+from nnModels.CVAE2D_PATCH import CVAE2D_PATCH, CVAE2D_PATCH_16, CVAE2D_PATCH_32, CVAE2D_PATCH_3latent64, CVAE2D_PATCH_3latent32, CVAE2D_PATCH_7
 from nnModels.losses import image_reconstruction_error_patch, pixel_reconstruction_error
 
 from utils.display_individual_observations_2D import project_encodings_for_results, get_longitudinal_images
@@ -97,7 +97,6 @@ def plot_recon_error_histogram_patch(recon_error_list, model_name, method):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--method", type=str, required=False, default="image")
-    parser.add_argument("-set", type=str, required=False, default="test")
     parser.add_argument("--dim", type=int, required=False, default=64)
     parser.add_argument("--beta", type=float, required=False, default=2)
     parser.add_argument("--gamma", type=float, required=False, default=100)
@@ -137,7 +136,16 @@ if __name__ == "__main__":
         plot_recon_error_histogram_patch(np.array(all_losses), "VAE", method)
         exit()
 
-    
+    if latent_dimension == 332:
+        model_type = CVAE2D_PATCH_3latent32
+    elif latent_dimension == 32:
+        model_type = CVAE2D_PATCH_32
+    elif latent_dimension == 364:
+        model_type = CVAE2D_PATCH_3latent64
+    elif latent_dimension == 7:
+        model_type = CVAE2D_PATCH_7
+    else:
+        model_type = CVAE2D_PATCH_16
 
     # Getting the path to the saved models
     VAE_nn_saving_path = f"saved_models_2D/best_patch_fold_CVAE2D_{latent_dimension}_{beta}.pth"
@@ -153,15 +161,13 @@ if __name__ == "__main__":
     ##### LAUNCHING COMPUTATION FOR VAE #####
 
     # Loading the VAE model
-    model = CVAE2D_PATCH(latent_dimension)
+    model = model_type(latent_dimension)
     model.load_state_dict(torch.load(VAE_nn_saving_path, map_location='cpu'))
     model.to(device)
     model.training = False
 
-    if set_choice == "train":
-        dataset = Dataset2D_patch("data_csv/starmen_patch_train_set.csv", read_image=open_npy,transform=transformations)
-    else:
-        dataset = Dataset2D_patch("data_csv/starmen_patch_test_set.csv", read_image=open_npy,transform=transformations)
+
+    dataset = Dataset2D_patch("data_csv/starmen_patch_test_set.csv", read_image=open_npy,transform=transformations)
     data_loader = DataLoader(dataset, batch_size=1, num_workers=num_worker, shuffle=True, pin_memory=True, )
     all_losses = []
 
@@ -190,7 +196,7 @@ if __name__ == "__main__":
     ##### LAUNCHING COMPUTATION FOR LVAE #####
 
     # # Loading the longitudinal model
-    # model = CVAE2D_PATCH(latent_dimension)
+    # model = model_type(latent_dimension)
     # model.load_state_dict(torch.load(LVAE_nn_saving_path, map_location='cpu'))
     # model.to(device)
     # model.training = False
