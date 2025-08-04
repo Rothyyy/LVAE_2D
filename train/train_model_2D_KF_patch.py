@@ -10,8 +10,10 @@ import os
 
 from dataset.Dataset2D import Dataset2D_patch
 from longitudinalModel.fit_longitudinal_estimator_on_nn import fit_longitudinal_estimator_on_nn
-# from nnModels.CVAE2D import CVAE2D
 from longitudinalModel.train import train, train_kfold_patch, train_kfold_patch_v1, train_kfold_patch_v2
+
+from longitudinalModel.fit_longitudinal_estimator_on_nn_contour import fit_longitudinal_estimator_on_nn_contour
+
 from dataset.group_based_train_test_split import group_based_train_test_split
 from dataset.split_k_folds import train_k_folds_split_patch
 

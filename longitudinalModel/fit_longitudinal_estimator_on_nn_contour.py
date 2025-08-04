@@ -3,7 +3,7 @@ import torch
 from leaspy import Data
 
 
-def fit_longitudinal_estimator_on_nn_contour(data_loader, model, device, longitudinal_estimator,
+def fit_longitudinal_estimator_on_nn_patch_contour(data_loader, model, device, longitudinal_estimator,
                                      longitudinal_estimator_settings):
     with torch.no_grad():
         encodings = []
@@ -51,7 +51,7 @@ def fit_longitudinal_estimator_on_nn_contour(data_loader, model, device, longitu
 
 
 
-def fit_longitudinal_estimator_on_nn_patch_v1(data, model, device, longitudinal_estimator,
+def fit_longitudinal_estimator_on_nn_patch_contour_v1(data, model, device, longitudinal_estimator,
                                            longitudinal_estimator_settings):
     with torch.no_grad():
         encodings = []
@@ -103,8 +103,8 @@ def fit_longitudinal_estimator_on_nn_patch_v1(data, model, device, longitudinal_
 
 
 
-def fit_longitudinal_estimator_on_nn_patch_v2(data_loader, model, device, longitudinal_estimator,
-                                           longitudinal_estimator_settings):
+def fit_longitudinal_estimator_on_nn_patch_contour_v2(data_loader, model, device, longitudinal_estimator,
+                                                      longitudinal_estimator_settings):
     with torch.no_grad():
         encodings = []
         times = []

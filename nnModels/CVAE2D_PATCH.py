@@ -408,15 +408,8 @@ class CVAE2D_PATCH_32(nn.Module):
         self.bn1 = nn.BatchNorm2d(8)
         self.bn2 = nn.BatchNorm2d(16)
         self.bn3 = nn.BatchNorm2d(24)
-        # self.bn4_mu = nn.BatchNorm2d(32)
-        # self.bn4_var = nn.BatchNorm2d(32)
-
-        # self.fc5 = nn.Linear(16, latent_representation_size)   
-        # self.fc6 = nn.Linear(16, latent_representation_size)   
-        # self.fc11 = nn.Linear(288, latent_representation_size)
 
         # Decoder
-        # self.fc_decode = nn.Linear(latent_representation_size, 16) 
         self.deconv1 = nn.ConvTranspose2d(32, 24, kernel_size=3, stride=1)   # [24, 3, 3]
         self.deconv2 = nn.ConvTranspose2d(24, 16, kernel_size=3, stride=3)   # [16, 9, 9]
         self.deconv3 = nn.ConvTranspose2d(16, 8, kernel_size=3, stride=1)    # [8, 11 ,11]
@@ -444,8 +437,6 @@ class CVAE2D_PATCH_32(nn.Module):
     def decoder(self, encoded):
         # print("Start decoder")
         # print("Shape encoding =", encoded.shape)
-        # h5 = self.fc_decode(encoded).view(-1, 16, 1, 1)
-        # print("Shape h5 =", h5.shape)
         h6 = F.gelu(self.bn5(self.deconv1(encoded))) 
         # print("Shape h6 =", h6.shape)
         h7 = F.gelu(self.bn6(self.deconv2(h6))) 
@@ -453,7 +444,6 @@ class CVAE2D_PATCH_32(nn.Module):
         h8 = F.gelu(self.bn7(self.deconv3(h7))) 
         # print("Shape h8 =", h8.shape)
         h9 = F.sigmoid(self.deconv4(h8))       # VERSION output in [0,1]
-        # h9 = F.tanh(self.deconv4(h8))     # VERSION output in [-1,1]
         # print("Shape h9 =", h9.shape)
 
         return h9
@@ -525,14 +515,6 @@ class CVAE2D_PATCH_3latent32(nn.Module):
         self.lr = 1e-4  # For epochs between MCMC steps
         self.epoch = 0  # For tensorboard to keep track of total number of epochs
         self.name = 'CVAE_2D_PATCH'
-
-
-        """nn.Conv2d(1, 8, kernel_size=3, stride=2),   # 15x15 → 7x7
-        nn.ReLU(),
-        nn.Conv2d(8, 16, kernel_size=3, stride=2),  # 7x7 → 3x3
-        nn.ReLU(),
-        nn.Conv2d(16, 32, kernel_size=3, stride=2), # 3x3 → 1x1
-        nn.ReLU()"""
 
         # Encoder
         self.conv1 = nn.Conv2d(1, 8, kernel_size=3, stride=2)        # [8, 7, 7]
@@ -641,14 +623,6 @@ class CVAE2D_PATCH_3latent64(nn.Module):
         self.lr = 1e-4  # For epochs between MCMC steps
         self.epoch = 0  # For tensorboard to keep track of total number of epochs
         self.name = 'CVAE_2D_PATCH'
-
-
-        """nn.Conv2d(1, 8, kernel_size=3, stride=2),   # 15x15 → 7x7
-        nn.ReLU(),
-        nn.Conv2d(8, 16, kernel_size=3, stride=2),  # 7x7 → 3x3
-        nn.ReLU(),
-        nn.Conv2d(16, 32, kernel_size=3, stride=2), # 3x3 → 1x1
-        nn.ReLU()"""
         
         # Encoder
         self.conv1 = nn.Conv2d(1, 16, kernel_size=3, stride=2, padding=1)       # [16, 8, 8]

@@ -9,7 +9,8 @@ import os
 import sys
 from longitudinalModel.project_encodings_for_training import project_encodings_for_training
 from longitudinalModel.test import test
-from longitudinalModel.fit_longitudinal_estimator_on_nn import fit_longitudinal_estimator_on_nn, fit_longitudinal_estimator_on_nn_patch, fit_longitudinal_estimator_on_nn_patch_v1, fit_longitudinal_estimator_on_nn_patch_v2
+from longitudinalModel.fit_longitudinal_estimator_on_nn import fit_longitudinal_estimator_on_nn #, fit_longitudinal_estimator_on_nn_patch, fit_longitudinal_estimator_on_nn_patch_v1, fit_longitudinal_estimator_on_nn_patch_v2
+from longitudinalModel.fit_longitudinal_estimator_on_nn_contour import fit_longitudinal_estimator_on_nn_patch_contour, fit_longitudinal_estimator_on_nn_patch_contour_v1, fit_longitudinal_estimator_on_nn_patch_contour_v2
 from nnModels.losses import longitudinal_loss, spatial_auto_encoder_loss
 from torch.optim.lr_scheduler import CosineAnnealingWarmRestarts
 import torch.nn.functional as F
@@ -300,10 +301,11 @@ def train_kfold_patch(model_type, path_best_fold_model, k_folds_index_list,
           batch_size=256, num_workers=round(os.cpu_count()/4),
           latent_dimension=64, gamma=100, beta=5):
 
-    transformations = transforms.Compose([
-            transforms.Lambda(lambda x: x.to(torch.float32))
-            , transforms.Lambda(lambda x: 2*x - 1)
-        ])
+    # transformations = transforms.Compose([
+    #         transforms.Lambda(lambda x: x.to(torch.float32))
+    #         , transforms.Lambda(lambda x: 2*x - 1)
+    #     ])
+    transformations = transforms.Compose([])
 
     iterator = tqdm(range(nb_epochs), desc="Training", file=sys.stdout)
     folds_df_list = [pd.read_csv(f"data_csv/train_patch_folds/starmen_patch_train_set_fold_{i}.csv") for i in k_folds_index_list]
@@ -346,7 +348,7 @@ def train_kfold_patch(model_type, path_best_fold_model, k_folds_index_list,
             total_recon_loss, total_kl_loss, total_alignment_loss = 0.0, 0.0, 0.0
 
             ### Fit the longitudinal mixed effect model
-            longitudinal_estimator, encodings_df = fit_longitudinal_estimator_on_nn_patch(train_data_loader, model, device,
+            longitudinal_estimator, encodings_df = fit_longitudinal_estimator_on_nn_patch_contour(train_data_loader, model, device,
                                                                                         longitudinal_estimator,
                                                                                         longitudinal_estimator_settings, patch_size=15)
             timepoints_of_projection, predicted_latent_variables = project_encodings_for_training(encodings_df,
@@ -435,10 +437,11 @@ def train_kfold_patch_v1(model_type, path_best_fold_model, k_folds_index_list,
           batch_size=256, num_workers=round(os.cpu_count()/4),
           latent_dimension=64, gamma=100, beta=5):
     
-    transformations = transforms.Compose([
-            transforms.Lambda(lambda x: x.to(torch.float32))
-            , transforms.Lambda(lambda x: 2*x - 1)
-        ])
+    # transformations = transforms.Compose([
+    #         transforms.Lambda(lambda x: x.to(torch.float32))
+    #         , transforms.Lambda(lambda x: 2*x - 1)
+    #     ])
+    transformations = transforms.Compose([])
 
     iterator = tqdm(range(nb_epochs), desc="Training", file=sys.stdout)
     folds_df_list = [pd.read_csv(f"data_csv/train_patch_folds/starmen_patch_train_set_fold_{i}.csv") for i in k_folds_index_list]
@@ -485,7 +488,7 @@ def train_kfold_patch_v1(model_type, path_best_fold_model, k_folds_index_list,
             
             # Training step
             for data in train_data_loader:
-                longitudinal_estimator, encodings_df = fit_longitudinal_estimator_on_nn_patch_v1(data, model, device,
+                longitudinal_estimator, encodings_df = fit_longitudinal_estimator_on_nn_patch_contour_v1(data, model, device,
                                                                                                 longitudinal_estimator,
                                                                                                 longitudinal_estimator_settings, patch_size=15)
                 timepoints_of_projection, predicted_latent_variables = project_encodings_for_training(encodings_df,
@@ -577,10 +580,11 @@ def train_kfold_patch_v2(model_type, path_best_fold_model, k_folds_index_list,
         end = min(start + chunk_size, len(dataset))
         return torch.utils.data.Subset(dataset, list(range(start, end)))
 
-    transformations = transforms.Compose([
-            transforms.Lambda(lambda x: x.to(torch.float32))
-            , transforms.Lambda(lambda x: 2*x - 1)
-        ])
+    # transformations = transforms.Compose([
+    #         transforms.Lambda(lambda x: x.to(torch.float32))
+    #         , transforms.Lambda(lambda x: 2*x - 1)
+    #     ])
+    transformations = transforms.Compose([])
 
     iterator = tqdm(range(nb_epochs), desc="Training", file=sys.stdout)
     folds_df_list = [pd.read_csv(f"data_csv/train_patch_folds/starmen_patch_train_set_fold_{i}.csv") for i in k_folds_index_list]
@@ -629,7 +633,7 @@ def train_kfold_patch_v2(model_type, path_best_fold_model, k_folds_index_list,
             total_recon_loss, total_kl_loss, total_alignment_loss = 0.0, 0.0, 0.0
 
             ### Fit the longitudinal mixed effect model
-            longitudinal_estimator, encodings_df = fit_longitudinal_estimator_on_nn_patch(loader, model, device,
+            longitudinal_estimator, encodings_df = fit_longitudinal_estimator_on_nn_patch_contour_v2(loader, model, device,
                                                                                         longitudinal_estimator,
                                                                                         longitudinal_estimator_settings, patch_size=15)
             timepoints_of_projection, predicted_latent_variables = project_encodings_for_training(encodings_df,
