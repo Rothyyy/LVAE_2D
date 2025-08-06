@@ -11,6 +11,7 @@ import json
 import matplotlib.pyplot as plt
 
 from dataset.Dataset2D import Dataset2D_patch
+from dataset.LongitudinalDataset2D_patch_contour import LongitudinalDataset2D_patch_contour, longitudinal_collate_2D_patch_contour
 from longitudinalModel.fit_longitudinal_estimator_on_nn import fit_longitudinal_estimator_on_nn
 from dataset.group_based_train_test_split import group_based_train_test_split
 
@@ -21,7 +22,7 @@ from utils.display_individual_observations_2D import project_encodings_for_resul
 from utils.loading_image import open_npy
 from dataset.LongitudinalDataset2D_patch import LongitudinalDataset2D_patch, longitudinal_collate_2D_patch
 from .plot_anomaly import plot_anomaly_bar, plot_anomaly_figure_patch
-from utils.patch_to_image import pad_array, pixel_counting, patch_to_image
+from utils.patch_to_image import pad_array, pixel_counting, patch_to_image, patch_contour_to_image
 
 np.set_printoptions(threshold=np.inf)
 
@@ -61,6 +62,7 @@ if __name__=="__main__":
     parser.add_argument("--gamma", type=float, required=False, default=100)
     parser.add_argument("--iterations", type=int, required=False, default=5)
     parser.add_argument("--dim", type=int, required=False, default=64)
+    parser.add_argument("-pc", "--patch_contour", type=bool, required=False, default=False)
     args = parser.parse_args()
 
 
@@ -118,19 +120,17 @@ if __name__=="__main__":
     # Loading VAE model
     model_VAE = model_type(latent_dimension)
     model_VAE.load_state_dict(torch.load(model_VAE_path, map_location='cpu'))
-    model_VAE = model_VAE.to(device)
     model_VAE.eval()
     model_VAE.training = False
-    model_VAE.to(device)
+    model_VAE = model_VAE.to(device)
 
 
     # # Loading LVAE model
     # model_LVAE = model_type(latent_dimension)
     # model_LVAE.load_state_dict(torch.load(model_LVAE_path, map_location='cpu'))
-    # model_LVAE = model_LVAE.to(device)
     # model_LVAE.eval()
     # model_LVAE.training = False
-    # model_LVAE.to(device)
+    # model_LVAE = model_LVAE.to(device)
     # longitudinal_estimator = Leaspy.load(longitudinal_saving_path)
 
 
@@ -140,26 +140,24 @@ if __name__=="__main__":
     #         transforms.Lambda(lambda x: x.to(torch.float32))
     #         , transforms.Lambda(lambda x: 2*x - 1)
     #     ])
-    dataset = LongitudinalDataset2D_patch(anomaly_dataset_path, read_image=open_npy, transform=transformations)
-    data_loader = DataLoader(dataset, batch_size=1, num_workers=num_workers, pin_memory=True, collate_fn=longitudinal_collate_2D_patch, shuffle=False)
+
+    if args.patch_contour:
+        dataset = LongitudinalDataset2D_patch_contour(anomaly_dataset_path, read_image=open_npy, transform=transformations)
+        data_loader = DataLoader(dataset, batch_size=1, num_workers=num_workers, pin_memory=True, collate_fn=longitudinal_collate_2D_patch_contour, shuffle=False)
+
+    else:
+        dataset = LongitudinalDataset2D_patch(anomaly_dataset_path, read_image=open_npy, transform=transformations)
+        data_loader = DataLoader(dataset, batch_size=1, num_workers=num_workers, pin_memory=True, collate_fn=longitudinal_collate_2D_patch, shuffle=False)
     
     VAE_threshold_95 = threshold_dict["VAE_threshold_95"]
     VAE_threshold_99 = threshold_dict["VAE_threshold_99"]
-
-    # LVAE_threshold_95 = threshold_dict["VAE_threshold_95"]
-    # LVAE_threshold_99 = threshold_dict["VAE_threshold_99"]
 
 
     # These variables will count the total number of anomalous images/pixel detected 
     VAE_anomaly_detected_95 = 0
     VAE_anomaly_detected_99 = 0
-    # LVAE_anomaly_detected_95 = 0
-    # LVAE_anomaly_detected_99 = 0
 
     with torch.no_grad():
-        # This variable will store how many times a image/pixel will be considered as anomalous
-        # total_detection_anomaly_VAE = torch.zeros(size_anomaly).to(device)
-        # total_detection_anomaly_LVAE = torch.zeros(size_anomaly).to(device)
         
         for data in data_loader:
 
@@ -167,14 +165,8 @@ if __name__=="__main__":
             patches = data[0]   # shape = [25000, 1, 15, 15]
             patches = patches.to(device)
             id = data[2][0]
-
-            # pixel_errors_VAE = torch.zeros(size_anomaly).to(device) 
-            # pixel_errors_LVAE = torch.zeros(size_anomaly).to(device)
-            
             # VAE and LVAE image reconstruction
             _, _, recon_patches_VAE, _ = model_VAE(patches)   # shape = [25000, 1, 15, 15]
-            # _, _, recon_images_LVAE = get_longitudinal_images(data, model_LVAE, longitudinal_estimator)
-
 
             # Reshape the patches into shape = [10, 2500, 1, 15, 15]
             patches = patches.reshape((10, 2500, 1, 15, 15))
@@ -195,58 +187,13 @@ if __name__=="__main__":
                 # pixel_score = compute_pixel_ano_score(anomaly_score_array)      # shape = [64, 64]
                 pixel_score = anomaly_score_array
                 
-                # Post processing before getting the image
-                patches = (patches + 1) / 2
-                recon_patches_VAE = (recon_patches_VAE + 1) / 2
- 
 
                 image_array_original[t] = patch_to_image(patches[t, :, 0].numpy())
                 image_array_reconstructed[t] = patch_to_image(recon_patches_VAE[t,: , 0].numpy())
 
                 anomaly_map[t] = pixel_score > VAE_threshold_95   #  !!! Here to change which threshold to use
-                # total_detection_anomaly_VAE[t] += np.sum(anomaly_map[t])
-
-                ###### Compute LVAE's reconstruction error
-                
-                # reconstruction_error = loss_function(recon_images_LVAE[t, 0], images[t, 0], method)
-                
-                # compare_to_threshold = reconstruction_error > VAE_threshold_99   # Here to change with threshold to use
-                # anomaly_detected_vector_LVAE[t] += (compare_to_threshold).any()
-                # total_detection_anomaly_LVAE[t] += compare_to_threshold
-                # if method != "image":
-                #     pixel_errors_LVAE[t] = compare_to_threshold 
-
-                # LVAE_anomaly_detected_95 += torch.sum(reconstruction_error > LVAE_threshold_95).detach().cpu().item()
-                # LVAE_anomaly_detected_99 += torch.sum(reconstruction_error > LVAE_threshold_99).detach().cpu().item()
 
             # For a subject, plot the anomalous image, the reconstructed image and the residual
-            plot_anomaly_figure_patch(image_array_original, image_array_reconstructed, anomaly_map, id, anomaly, latent_dimension=latent_dimension)
-
-
-        # if method == "image":   # pixel or pixel_all would have too many bar to plot making it unreadable
-            # plot_anomaly_bar(total_detection_anomaly_VAE.flatten(), "VAE", anomaly, method, num_images)
-            # plot_anomaly_bar(total_detection_anomaly_LVAE.flatten(), "LVAE", anomaly, method, num_images)
-
-    # if method == "pixel":
-    #     total_detection_anomaly_VAE = torch.sum(total_detection_anomaly_VAE.detach().cpu(), dim=1).tolist()
-    #     # total_detection_anomaly_LVAE = torch.sum(total_detection_anomaly_LVAE.detach().cpu(), dim=1).tolist()
-    #     anomaly_dict_pixel = {}
-    #     anomaly_dict_pixel["VAE_pixel_anomaly_99"] = total_detection_anomaly_VAE
-    #     # anomaly_dict_pixel["LVAE_pixel_anomaly_99"] = total_detection_anomaly_LVAE
-    #     with open(f'./results_pixel_AD_{anomaly}.json', 'w') as f:
-    #         json.dump(anomaly_dict_pixel, f, ensure_ascii=False)
-
-
-    ######## PRINTING SOME RESULTS ########
-
-    # print()
-    # print(f"Using method {method} with VAE and {num_images} images:")
-    # print(f"With threshold_95 we detect {VAE_anomaly_detected_95} anomaly.")
-    # print(f"With threshold_99 we detect {VAE_anomaly_detected_99} anomaly.")
-    # print()
-
-    # print(f"Using method {method} with LVAE and {num_images} images:")
-    # print(f"With threshold_95 we detect {LVAE_anomaly_detected_95} anomaly.")
-    # print(f"With threshold_99 we detect {LVAE_anomaly_detected_99} anomaly.")
-
+            plot_anomaly_figure_patch(image_array_original, image_array_reconstructed, anomaly_map, id, anomaly,
+                                       latent_dimension=latent_dimension)
 

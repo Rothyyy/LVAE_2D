@@ -9,7 +9,8 @@ import argparse
 import os
 import json
 
-from dataset.Dataset2D import Dataset2D_patch
+from dataset.Dataset2D import Dataset2D_patch, collate_2D_patch
+from dataset.LongitudinalDataset2D_patch_contour import Dataset
 from dataset.LongitudinalDataset2D_patch import LongitudinalDataset2D_patch, longitudinal_collate_2D_patch
 
 from longitudinalModel.fit_longitudinal_estimator_on_nn import fit_longitudinal_estimator_on_nn
@@ -63,7 +64,7 @@ def plot_recon_error_histogram_patch(recon_error_list, model_name, method):
         recon_error_list *= 255
 
     # Create custom bin labels
-    custom_bins = [i*50 for i in range(20)]
+    custom_bins = [i for i in range(20)]
 
     fig, ax = plt.subplots()
     counts, bin_edges, patches = ax.hist(recon_error_list, color=color, edgecolor='black', bins=custom_bins)
@@ -81,8 +82,8 @@ def plot_recon_error_histogram_patch(recon_error_list, model_name, method):
     # Add axis labels and title
     ax.set_xlabel('Reconstruction error range')
     ax.set_ylabel('Count')
-    ax.set_title(f'Reconstruction errors when considering patches with {model_name} (dim {latent_dimension})')
-    ax.set_ylim(0, 1e6)
+    # ax.set_title(f'Reconstruction errors when considering patches with {model_name} (dim {latent_dimension})')
+    ax.set_ylim(0, 0.5e6)
 
     # Layout fix
     fig.tight_layout()
@@ -116,7 +117,6 @@ if __name__ == "__main__":
         exit()
 
 
-    set_choice = args.set
     stats_dict = {}
 
     # Setting some parameters
@@ -153,22 +153,22 @@ if __name__ == "__main__":
     longitudinal_saving_path = f"saved_models_2D/best_patch_fold_longitudinal_estimator_params_CVAE2D_{latent_dimension}_{beta}_{gamma}_{train_iter}.json2"
 
 
-    transformations = transforms.Compose([
-            transforms.Lambda(lambda x: x.to(torch.float32))
-            , transforms.Lambda(lambda x: 2*x - 1)
-        ])
+    transformations = transforms.Compose([])
+    # transformations = transforms.Compose([
+    #         transforms.Lambda(lambda x: x.to(torch.float32))
+    #         , transforms.Lambda(lambda x: 2*x - 1)
+    #     ])
 
     ##### LAUNCHING COMPUTATION FOR VAE #####
 
     # Loading the VAE model
     model = model_type(latent_dimension)
     model.load_state_dict(torch.load(VAE_nn_saving_path, map_location='cpu'))
-    model.to(device)
     model.training = False
+    model = model.to(device)    
 
-
-    dataset = Dataset2D_patch("data_csv/starmen_patch_test_set.csv", read_image=open_npy,transform=transformations)
-    data_loader = DataLoader(dataset, batch_size=1, num_workers=num_worker, shuffle=True, pin_memory=True, )
+    dataset = Dataset2D_patch("data_csv/starmen_patch_test_set.csv", read_image=open_npy, transform=transformations)
+    data_loader = DataLoader(dataset, batch_size=1, num_workers=num_worker, shuffle=True, pin_memory=True, collate_fn=collate_2D_patch)
     all_losses = []
 
     # 1 epoch to get all reconstruction error with VAE
@@ -198,9 +198,9 @@ if __name__ == "__main__":
     # # Loading the longitudinal model
     # model = model_type(latent_dimension)
     # model.load_state_dict(torch.load(LVAE_nn_saving_path, map_location='cpu'))
-    # model.to(device)
     # model.training = False
     # longitudinal_estimator = Leaspy.load(longitudinal_saving_path)
+    # model = model.to(device)
 
     # if set_choice == "train":
     #     dataset = LongitudinalDataset2D_patch("data_csv/starmen_train_set.csv", read_image=open_npy, transform=transformations)

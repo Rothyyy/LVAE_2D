@@ -149,4 +149,5 @@ def plot_anomaly_figure_patch(original_image, reconstructed_image_VAE, anomaly_m
     plt.tight_layout()
     plt.savefig(save_path)
     plt.close(f)
+    plt.clf()
     return 

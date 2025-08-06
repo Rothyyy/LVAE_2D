@@ -25,9 +25,30 @@ def extract_centered_patches_from_contour(image, contour_mask, patch_size=15):
                 centers[patch_id] = [i, j]
                 patch_id += 1
 
-    return patches[:patch_id], centers[:patch_id]
+    return patches[:patch_id], centers[:patch_id].astype(int)
 
+def get_filled_contour_mask(image):
 
+    # Put image pixel value in [0, 255]
+    if np.max(image <= 1):
+        image = (image * 255).astype(np.uint8)
+
+    # Threshold the image
+    _, thresh = cv2.threshold(image, 100, 255, cv2.THRESH_BINARY)
+
+    # Find contours
+    contours, _ = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+
+    # Create a blank mask (same size as image)
+    mask = np.zeros_like(image)
+
+    # Draw filled contour(s) on the mask
+    cv2.drawContours(mask, contours, contourIdx=-1, color=255, thickness=cv2.FILLED)
+
+    # Put the image pixel value back to [0, 1]
+    image = (image/255).astype(np.float64)
+
+    return image, mask
 
 if __name__=="__main__":
     parser = argparse.ArgumentParser()
@@ -54,21 +75,8 @@ if __name__=="__main__":
             
             # Load image and get all patches
             path_image = f"./data_starmen/images/SimulatedData__Reconstruction__starman__subject_s{patient_id}__tp_{t}.npy"
-            image = (np.load(path_image) * 255).astype(np.uint8)
-
-            # Threshold the image
-            _, thresh = cv2.threshold(image, 100, 255, cv2.THRESH_BINARY)
-
-            # Find contours
-            contours, _ = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-
-            # Create a blank mask (same size as image)
-            mask = np.zeros_like(image)
-
-            # Draw filled contour(s) on the mask
-            cv2.drawContours(mask, contours, contourIdx=-1, color=255, thickness=cv2.FILLED)
-
-            image = (image/255).astype(np.float64)
+            image = np.load(path_image)
+            image, mask = get_filled_contour_mask(image)
             patches, centers = extract_centered_patches_from_contour(image, mask, patch_size)
 
             # Store the information in a row

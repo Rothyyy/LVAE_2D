@@ -6,6 +6,7 @@ import pandas as pd
 import os
 
 from dataset.patch_to_csv import extract_centered_patches
+from dataset.patch_contour_to_csv import extract_centered_patches_from_contour, get_filled_contour_mask
 
 
 # Drawing circles on some specific part of the image (left part of the starman, center of the starman)
@@ -13,12 +14,12 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("-n", "--n_sample", type=int, required=False, default=5)
     parser.add_argument("-a", "--anomaly", type=str, required=False, default="darker_line")
-    parser.add_argument("-p", "--patch", type=bool, required=False, default=True,
+    parser.add_argument("-p", "--patch", type=bool, required=False, default=False,
                         help="Extract patches and create csv file ?")
+    parser.add_argument("-pc", "--patch_contour", type=bool, required=False, default=False,
+                        help="Extract patches from the contour and create csv file ?")
     parser.add_argument("-s", "--size", type=int, required=False, default=15,
                         help="patch size")
-    parser.add_argument("-set", type=str, required=False, default="test",
-                        help="choose which set ('train', 'test', 'all') to consider when generating anomalous images.")
     args = parser.parse_args()
 
     anomaly = args.anomaly
@@ -28,20 +29,13 @@ if __name__ == "__main__":
         exit()
 
     n_sample = args.n_sample      # Number of subject to generate an anomaly
-    if args.set == "test":
-        file_csv = pd.read_csv("data_csv/starmen_test_set.csv")
-        id_list = file_csv["subject_id"].unique()
-        random_subject = np.random.choice(id_list, size=n_sample, replace=False)
+    file_csv = pd.read_csv("data_csv/starmen_test_set.csv")
+    id_list = file_csv["subject_id"].unique()
+    random_subject = np.random.choice(id_list, size=n_sample, replace=False)
     
-    elif args.set == "train":
-        file_csv = pd.read_csv("data_csv/starmen_train_set.csv")
-        id_list = file_csv["subject_id"].unique()
-        random_subject = np.random.choice(id_list, size=n_sample, replace=False)
-
-    else:
-        random_subject = np.random.choice(1000, size=n_sample, replace=False)
     
     get_patch = args.patch
+    get_patch_contour = args.patch_contour
     os.makedirs("data_starmen/anomaly_patches", exist_ok=True)
     patch_size = args.size
     num_patch = (64 - (patch_size//2 * 2)) * (64 - (patch_size//2 * 2))     # Number of patches per image
@@ -70,7 +64,7 @@ if __name__ == "__main__":
             # Find contours
             contours, hierarchy = cv2.findContours(binary, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
-            # This block is to put a circle on the most left part of the image (hopefully, the left hand)
+            # This block is to get the coordinates of the most left part of the image (hopefully, the left hand)
             shape_contour = contours[0].shape
             contours = contours[0].reshape((shape_contour[0], shape_contour[-1]))
             leftmost_position = np.argmin(contours[:, 0])
@@ -86,7 +80,7 @@ if __name__ == "__main__":
                             max(0, 200-20*round(ages[t]-ages[0])),
                             max(0, 200-20*round(ages[t]-ages[0]))), -1)
             if anomaly == "darker_line":
-                cv2.line(image_uint8, contours[leftmost_position], contours[leftmost_position] + 3,     # TODO: Maybe consider better line position ?
+                cv2.line(image_uint8, contours[leftmost_position] + 1, contours[leftmost_position] + 4,     # TODO: Maybe consider better line position ?
                          ((max(0, 200-20*round(ages[t]-ages[0])),
                            max(0, 200-20*round(ages[t]-ages[0])),
                            max(0, 200-20*round(ages[t]-ages[0])))), 2)
@@ -117,13 +111,27 @@ if __name__ == "__main__":
                 }
                 data_patches.append(row)
 
+            if get_patch_contour:
+                image, mask = get_filled_contour_mask(image)
+                patches, centers = extract_centered_patches_from_contour(image, mask, patch_size)
+
+                # Store the information in a row
+                np.save(f"./data_starmen/anomaly_patches/Starman__subject_s{subject}__tp_{t}_patches.npy", patches)
+                np.save(f"./data_starmen/anomaly_patches/Starman__subject_s{subject}_tp_{t}_centers.npy", centers)
+                row = {
+                    "subject_id": str(subject),
+                    "age": ages[t],
+                    "patch_path": f"./data_starmen/anomaly_patches/Starman__subject_s{subject}__tp_{t}_patches.npy",
+                    "centers_path": f"./data_starmen/anomaly_patches/Starman__subject_s{subject}_tp_{t}_centers.npy"
+                }
+                data_patches.append(row)
 
 
     # Saving the data in csv file
     data_df_image = pd.DataFrame(data_image)
     data_df_image.to_csv(f"data_csv/anomaly_{anomaly}_starmen_dataset.csv")
 
-    if get_patch:
+    if get_patch or get_patch_contour:
         data_df_patch = pd.DataFrame(data_patches)
         data_df_patch.to_csv(f"data_csv/anomaly_{anomaly}_starmen_dataset_patch.csv")
 

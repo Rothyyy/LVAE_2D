@@ -38,7 +38,9 @@ pixel_counting = compute_pixel_counting()
 
 def patch_to_image(patch_array, patch_size=15):
     """
-    This function will take an array of patches and return the original image
+    This function will take an array of patches and return the original image.
+    This function assumes that patch_array contains all the possible extracted patches of the image in the right order,
+    i.e. for 64x64 image and patch_size=15, 2500 patches from left to right, top to bottom.
     """
     half = patch_size//2
     image = np.zeros((64,64))
@@ -54,5 +56,27 @@ def patch_to_image(patch_array, patch_size=15):
             patch_num += 1
 
     return image/pixel_counting
+
+
+def patch_contour_to_image(patch_array, centers, patch_size=15):
+    """
+    This function takes the patches and associated centers and will sum the pixel values of the patches on the reconstructed image.
+    We assume that pixel that are never contained in a patch have value 0.
+    """
+    half = patch_size//2
+    reconstructed_image = np.zeros((64,64))
+    pixel_count_mask = np.zeros((64,64), dtype=int)
+    for patch_num in range(centers.shape[0]):
+        x, y = centers[patch_num]
+        top = max(x - half, 0)
+        bottom = min(x + half + 1, 64)
+        left = max(y - half, 0)
+        right = min(y + half + 1, 64)
+
+        reconstructed_image[top:bottom, left:right] += patch_array[patch_num]
+        pixel_count_mask[top:bottom, left:right] += 1
+
+    np.divide(reconstructed_image, pixel_count_mask, out=reconstructed_image, where=pixel_count_mask>0)
+    return reconstructed_image
 
 
