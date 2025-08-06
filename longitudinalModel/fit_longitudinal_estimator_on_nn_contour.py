@@ -97,7 +97,7 @@ def fit_longitudinal_estimator_on_nn_patch_contour_v1(data, model, device, longi
         #     print("Error in dimension features")
         #     print("Model features:", longitudinal_estimator.model.features)
         #     print("Data features:", encodings_data.headers)
-    return longitudinal_estimator, encodings_df
+    return longitudinal_estimator, encodings_df, patch_ids
 
 
 
@@ -148,7 +148,7 @@ def fit_longitudinal_estimator_on_nn_patch_contour_v2(data_loader, model, device
         except:
             print()
             print("Error in fit")
-    return longitudinal_estimator, encodings_df
+    return longitudinal_estimator, encodings_df, patch_ids
 
 
 

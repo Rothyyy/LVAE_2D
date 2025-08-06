@@ -4,7 +4,7 @@ from dataset.LongitudinalDataset2D import LongitudinalDataset2D, longitudinal_co
 from longitudinalModel.project_encodings_for_training import project_encodings_for_training
 import pandas as pd
 
-from longitudinalModel.utils import produce_encodings_df
+from longitudinalModel.utils import produce_encodings_df, produce_encodings_patch_contour_df
 from nnModels.CVAE2D import CVAE2D
 from nnModels.losses import longitudinal_loss, spatial_auto_encoder_loss, loss_bvae2, spatial_2D_auto_encoder_loss
 import torch.nn.functional as F
@@ -14,7 +14,8 @@ from utils.loading_image import open_npy
 
 
 def test(model, data_loader, longitudinal_estimator=None,
-         device='cuda' if torch.cuda.is_available() else 'cpu', spatial_loss=spatial_auto_encoder_loss):
+         device='cuda' if torch.cuda.is_available() else 'cpu', spatial_loss=spatial_auto_encoder_loss,
+         patch_version=False):
     """
     Test a variational autoencoder. If longitudinal_estimator is not None then the model will be trained in order for
     its encoding to respect the mixed effect model described by the longitudinal_estimator. Just like in the paper:
@@ -46,7 +47,12 @@ def test(model, data_loader, longitudinal_estimator=None,
             reconstruction_loss, kl_loss = spatial_loss(mu, logVar, reconstructed, input_)
             loss = reconstruction_loss + model.beta * kl_loss
             if longitudinal_estimator is not None:
-                encodings_df = produce_encodings_df(model, data, device)
+
+                if patch_version:
+                    encodings_df = produce_encodings_patch_contour_df(model, data, device)
+                else:
+                    encodings_df = produce_encodings_df(model, data, device)
+
                 timepoints_of_projection, predicted_latent_variables = project_encodings_for_training(encodings_df,
                                                                                                       longitudinal_estimator,
                                                                                                       )

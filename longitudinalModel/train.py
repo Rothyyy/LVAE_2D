@@ -489,7 +489,7 @@ def train_kfold_patch_v1(model_type, path_best_fold_model, k_folds_index_list,
             
             # Training step
             for data in train_data_loader:
-                longitudinal_estimator, encodings_df = fit_longitudinal_estimator_on_nn_patch_contour_v1(data, model, device,
+                longitudinal_estimator, encodings_df, patch_ids = fit_longitudinal_estimator_on_nn_patch_contour_v1(data, model, device,
                                                                                                 longitudinal_estimator,
                                                                                                 longitudinal_estimator_settings)
                 timepoints_of_projection, predicted_latent_variables = project_encodings_for_training(encodings_df,
@@ -503,8 +503,8 @@ def train_kfold_patch_v1(model_type, path_best_fold_model, k_folds_index_list,
                 loss = reconstruction_loss + model.beta * kl_loss
                 if longitudinal_estimator is not None:
                     alignment_loss = longitudinal_loss(mu, torch.cat(([
-                        torch.tensor(predicted_latent_variables[str(subject_id)]).float().to(device) for subject_id in
-                        data[2]])))
+                        torch.tensor(predicted_latent_variables[subject_id]).float().to(device) for subject_id in
+                        patch_ids])))
                     loss += model.gamma * alignment_loss
                     total_alignment_loss += alignment_loss.item()
 
@@ -531,7 +531,7 @@ def train_kfold_patch_v1(model_type, path_best_fold_model, k_folds_index_list,
             epoch_loss = test(model, valid_data_loader,
                                 longitudinal_estimator=longitudinal_estimator,
                                 device=device,
-                                spatial_loss=spatial_loss)
+                                spatial_loss=spatial_loss, patch_version=True)
 
             losses.append(epoch_loss)
 
@@ -559,8 +559,9 @@ def train_kfold_patch_v1(model_type, path_best_fold_model, k_folds_index_list,
         plt.show()
         plt.clf()
 
-        results_estimator, _ = fit_longitudinal_estimator_on_nn(train_data_loader, model, device, longitudinal_estimator,
-                                                                algo_settings_final_fit)
+        results_estimator, _ = fit_longitudinal_estimator_on_nn_patch_contour_v2(train_data_loader, model, device, 
+                                                                                 longitudinal_estimator,
+                                                                                 algo_settings_final_fit)
         results_estimator.save(longitudinal_saving_path + f"_fold_{valid_index}" + ".json2")
 
 
@@ -634,7 +635,7 @@ def train_kfold_patch_v2(model_type, path_best_fold_model, k_folds_index_list,
             total_recon_loss, total_kl_loss, total_alignment_loss = 0.0, 0.0, 0.0
 
             ### Fit the longitudinal mixed effect model
-            longitudinal_estimator, encodings_df = fit_longitudinal_estimator_on_nn_patch_contour_v2(loader, model, device,
+            longitudinal_estimator, encodings_df, patch_ids = fit_longitudinal_estimator_on_nn_patch_contour_v2(loader, model, device,
                                                                                         longitudinal_estimator,
                                                                                         longitudinal_estimator_settings)
             timepoints_of_projection, predicted_latent_variables = project_encodings_for_training(encodings_df,
@@ -651,8 +652,8 @@ def train_kfold_patch_v2(model_type, path_best_fold_model, k_folds_index_list,
                 loss = reconstruction_loss + model.beta * kl_loss
                 if longitudinal_estimator is not None:
                     alignment_loss = longitudinal_loss(mu, torch.cat(([
-                        torch.tensor(predicted_latent_variables[str(subject_id)]).float().to(device) for subject_id in
-                        data[2]])))
+                        torch.tensor(predicted_latent_variables[subject_id]).float().to(device) for subject_id in
+                        patch_ids])))
                     loss += model.gamma * alignment_loss
                     total_alignment_loss += alignment_loss.item()
 
@@ -679,7 +680,7 @@ def train_kfold_patch_v2(model_type, path_best_fold_model, k_folds_index_list,
             epoch_loss = test(model, valid_data_loader,
                                 longitudinal_estimator=longitudinal_estimator,
                                 device=device,
-                                spatial_loss=spatial_loss)
+                                spatial_loss=spatial_loss, patch_version=True)
 
             losses.append(epoch_loss)
 
@@ -697,7 +698,7 @@ def train_kfold_patch_v2(model_type, path_best_fold_model, k_folds_index_list,
             else:
                 nb_epochs_without_loss_improvement += 1
 
-            if nb_epochs_without_loss_improvement >= 10:
+            if nb_epochs_without_loss_improvement >= 100:
                 break
         print("\n")
         plt.plot(np.arange(1, len(losses) + 1), losses, label="Train loss (LVAE)")
@@ -707,8 +708,9 @@ def train_kfold_patch_v2(model_type, path_best_fold_model, k_folds_index_list,
         plt.show()
         plt.clf()
 
-        results_estimator, _ = fit_longitudinal_estimator_on_nn(train_data_loader, model, device, longitudinal_estimator,
-                                                                algo_settings_final_fit)
+        results_estimator, _ = fit_longitudinal_estimator_on_nn_patch_contour_v2(train_data_loader, model, device, 
+                                                                                 longitudinal_estimator,
+                                                                                 algo_settings_final_fit)
         results_estimator.save(longitudinal_saving_path + f"_fold_{valid_index}" + ".json2")
 
 

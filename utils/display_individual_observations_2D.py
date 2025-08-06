@@ -20,6 +20,50 @@ device = "cuda" if torch.cuda.is_available() else "cpu"
 
 
 
+
+
+
+
+def get_longitudinal_patches(data, model, fitted_longitudinal_estimator):
+    encodings = []
+    times = []
+    patch_ids = []
+
+    time_patch = data[1]
+    subject_ids = data[2]
+    centers_list = data[3]
+    batch_size = len(centers_list)
+    
+    projection_timepoints = {}
+
+    encoder_output = model.encoder(data[0].float().to(device))
+    logvars = encoder_output[1].detach().clone().to(device)
+    encodings.append((encoder_output[0].view((encoder_output[0].size(0), encoder_output[0].size(1)))).detach().clone().to(device))
+    for i in range(batch_size):
+        for t in range(10):     # Should be in range(len(centers_list[i]))  In case we do not have 10 images
+            number_patches = len(centers_list[i][t])
+            times.extend([time_patch[i][t]] * number_patches)
+            for patch in range(number_patches):
+                center_coord_x, center_coord_y = centers_list[i][t][patch]
+                patch_id = f"s_{subject_ids[i]}_{int(center_coord_x)}_{int(center_coord_y)}"
+                patch_ids.append(patch_id)
+                projection_timepoints[patch_id] = times[-1]
+
+    encodings = torch.cat(encodings)
+    encodings_df = pd.DataFrame({'ID': patch_ids, 'TIME': times})
+    for i in range(encodings.shape[1]):
+        encodings_df.insert(len(encodings_df.columns), f"ENCODING{i}",
+                            encodings[:, i].detach().clone().tolist())
+    encodings_df['ID'] = encodings_df['ID'].astype(str)
+
+    predicted_latent_variables, _ = project_encodings_for_results(encodings_df, None,
+                                                                  fitted_longitudinal_estimator,
+                                                                  projection_timepoints)
+    projected_patches = model.decoder(torch.tensor(predicted_latent_variables[str(subject_id)]).to(device))
+    # return encodings, logvars, projected_patches
+    return torch.from_numpy(predicted_latent_variables[str(subject_id)]), logvars, projected_patches
+
+
 def get_longitudinal_images(data, model, fitted_longitudinal_estimator):
     encodings = []
     times = []
@@ -45,6 +89,7 @@ def get_longitudinal_images(data, model, fitted_longitudinal_estimator):
     projected_images = model.decoder(torch.tensor(predicted_latent_variables[str(subject_id)]).to(device))
     # return encodings, logvars, projected_images
     return torch.from_numpy(predicted_latent_variables[str(subject_id)]), logvars, projected_images
+
 
 def display_individual_observations_2D(model, subject_id, dataset_csv, transformations=None,
                                                fitted_longitudinal_estimator=None, save_path="results.pdf",

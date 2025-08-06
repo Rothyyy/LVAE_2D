@@ -121,29 +121,29 @@ os.makedirs(os.path.dirname(longitudinal_saving_path), exist_ok=True)
 
 best_loss = 1e15
 
-best_loss, lvae_losses = train_kfold_patch(model_type, path_best_fold_model, folds_index, algo_settings, 
+# best_loss, lvae_losses = train_kfold_patch(model_type, path_best_fold_model, folds_index, algo_settings, 
+#                                      nb_epochs=100, lr=initial_lr, latent_dimension=latent_representation_size,
+#                                      nn_saving_path=LVAE_saving_path, longitudinal_saving_path=longitudinal_saving_path,
+#                                      loss_graph_saving_path=f"{output_path}/loss_longitudinal_only", previous_best_loss=best_loss,
+#                                      spatial_loss=loss_function, batch_size=batch_size, num_workers=num_worker)
+
+
+best_loss, lvae_losses = train_kfold_patch_v1(model_type, path_best_fold_model, folds_index, algo_settings, 
                                      nb_epochs=100, lr=initial_lr, latent_dimension=latent_representation_size,
                                      nn_saving_path=LVAE_saving_path, longitudinal_saving_path=longitudinal_saving_path,
                                      loss_graph_saving_path=f"{output_path}/loss_longitudinal_only", previous_best_loss=best_loss,
                                      spatial_loss=loss_function, batch_size=batch_size, num_workers=num_worker)
 
 
-# best_loss, lvae_losses = train_kfold_patch_v1(model_type, path_best_fold_model, folds_index, algo_settings, 
-#                                      nb_epochs=100, lr=initial_lr, latent_dimension=latent_representation_size,
-#                                      nn_saving_path=LVAE_saving_path, longitudinal_saving_path=longitudinal_saving_path,
-#                                      loss_graph_saving_path=f"{output_path}/loss_longitudinal_only", previous_best_loss=best_loss,
-#                                      spatial_loss=loss_function, batch_size=batch_size, num_workers=num_worker)
-
-
 # best_loss, lvae_losses = train_kfold_patch_v2(model_type, path_best_fold_model, folds_index, algo_settings, 
-#                                      nb_epochs=100, lr=initial_lr, latent_dimension=latent_representation_size,
+#                                      nb_epochs=100*10, lr=initial_lr, latent_dimension=latent_representation_size,
 #                                      nn_saving_path=LVAE_saving_path, longitudinal_saving_path=longitudinal_saving_path,
 #                                      loss_graph_saving_path=f"{output_path}/loss_longitudinal_only", previous_best_loss=best_loss,
 #                                      spatial_loss=loss_function, batch_size=batch_size, num_workers=num_worker)
 
 best_fold_LVAE = CV_LVAE(model_type, folds_index, test_df, LVAE_saving_path, longitudinal_saving_path, 
                          latent_dimension=latent_representation_size, gamma=gamma, beta=beta, iterations=args.iterations,
-                         plot_save_path=output_path, cv_patch=True)
+                         plot_save_path=output_path, cv_patch=2)
 
 
 save_best_fold_path_VAE = f"saved_models_2D/best_patch_fold_CVAE2D_{args.dimension}_{args.beta}_{args.gamma}_{args.iterations}.pth"
