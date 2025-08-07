@@ -35,17 +35,18 @@ def fit_longitudinal_estimator_on_nn_patch_contour(data_loader, model, device, l
         encodings_df['ID'] = encodings_df['ID'].astype(str)
 
     try:
+        print("Try 1")
         encodings_data = Data.from_dataframe(encodings_df)
         longitudinal_estimator.fit(encodings_data, longitudinal_estimator_settings)
     except:
-        print(encodings_df.columns)
-        try:
-            encodings_df = encodings_df.reset_index(drop=True)
-            encodings_data = Data.from_dataframe(encodings_df)
-            longitudinal_estimator.fit(encodings_data, longitudinal_estimator_settings)
-        except:
-            print()
-            print("Error in fit")
+        print("Try 2")
+        # try:
+        encodings_df = encodings_df.reset_index(drop=True)
+        encodings_data = Data.from_dataframe(encodings_df)
+        longitudinal_estimator.fit(encodings_data, longitudinal_estimator_settings)
+        # except:
+        #     print()
+        #     print("Error in fit")
     return longitudinal_estimator, encodings_df
 
 
@@ -139,17 +140,18 @@ def fit_longitudinal_estimator_on_nn_patch_contour_v2(data_loader, model, device
         encodings_df['ID'] = encodings_df['ID'].astype(str)
 
     try:
+        print("Try 1")
         encodings_data = Data.from_dataframe(encodings_df)
         longitudinal_estimator.fit(encodings_data, longitudinal_estimator_settings)
     except:
-        print(encodings_df.columns)
-        try:
-            encodings_df = encodings_df.reset_index(drop=True)
-            encodings_data = Data.from_dataframe(encodings_df)
-            longitudinal_estimator.fit(encodings_data, longitudinal_estimator_settings)
-        except:
-            print()
-            print("Error in fit")
+        print("Try 2")
+        # try:
+        encodings_df = encodings_df.reset_index(drop=True)
+        encodings_data = Data.from_dataframe(encodings_df)
+        longitudinal_estimator.fit(encodings_data, longitudinal_estimator_settings)
+        # except:
+        #     print()
+        #     print("Error in fit")
     return longitudinal_estimator, encodings_df, patch_ids
 
 

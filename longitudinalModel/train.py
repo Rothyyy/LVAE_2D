@@ -457,7 +457,7 @@ def train_kfold_patch_v1(model_type, path_best_fold_model, k_folds_index_list,
         model.device = device
         model = model.to(device)
 
-        longitudinal_estimator = Leaspy("linear", noise_model="gaussian_diagonal", source_dimension=latent_dimension - 1)
+        longitudinal_estimator = Leaspy("linear", noise_model="gaussian_diagonal", source_dimension=64 - 1)
 
         best_loss = previous_best_loss
         optimizer = optim.Adam(filter(lambda p: p.requires_grad, model.parameters()))

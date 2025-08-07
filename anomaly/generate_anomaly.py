@@ -63,6 +63,13 @@ if __name__ == "__main__":
             # Find contours
             contours, hierarchy = cv2.findContours(binary, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
+
+            # Create a blank mask (same size as image)
+            mask = np.zeros_like(image)         # This mask is used to "cheat" for darker_line and darker_circle
+
+            # Draw filled contour(s) on the mask
+            cv2.drawContours(mask, contours, contourIdx=-1, color=255, thickness=cv2.FILLED)
+
             # This block is to get the coordinates of the most left part of the image (hopefully, the left hand)
             shape_contour = contours[0].shape
             contours = contours[0].reshape((shape_contour[0], shape_contour[-1]))
@@ -111,21 +118,34 @@ if __name__ == "__main__":
                 }
                 data_patches.append(row)
 
-            if get_patch_contour:
+            if get_patch_contour and anomaly in ["growing_circle", "shrinking_circle"]:
                 image, mask = get_filled_contour_mask(image)
                 patches, centers = extract_centered_patches_from_contour(image, mask, patch_size)
 
                 # Store the information in a row
-                np.save(f"./data_starmen/anomaly_patches/Starman__subject_s{subject}__tp_{t}_patches.npy", patches)
-                np.save(f"./data_starmen/anomaly_patches/Starman__subject_s{subject}_tp_{t}_centers.npy", centers)
+                np.save(f"./data_starmen/anomaly_patches/{anomaly}__starman__subject_s{subject}__tp_{t}_patches.npy", patches)
+                np.save(f"./data_starmen/anomaly_patches/{anomaly}__starman__subject_s{subject}_tp_{t}_centers.npy", centers)
                 row = {
                     "subject_id": str(subject),
                     "age": ages[t],
-                    "patch_path": f"./data_starmen/anomaly_patches/Starman__subject_s{subject}__tp_{t}_patches.npy",
-                    "centers_path": f"./data_starmen/anomaly_patches/Starman__subject_s{subject}_tp_{t}_centers.npy"
+                    "patch_path": f"./data_starmen/anomaly_patches/{anomaly}__starman__subject_s{subject}__tp_{t}_patches.npy",
+                    "centers_path": f"./data_starmen/anomaly_patches/{anomaly}__starman__subject_s{subject}_tp_{t}_centers.npy"
                 }
                 data_patches.append(row)
 
+            elif get_patch_contour and anomaly in ["darker_line", "darler"]:
+                patches, centers = extract_centered_patches_from_contour(image, mask, patch_size)
+
+                # Store the information in a row
+                np.save(f"./data_starmen/anomaly_patches/{anomaly}__starman__subject_s{subject}__tp_{t}_patches.npy", patches)
+                np.save(f"./data_starmen/anomaly_patches/{anomaly}__starman__subject_s{subject}_tp_{t}_centers.npy", centers)
+                row = {
+                    "subject_id": str(subject),
+                    "age": ages[t],
+                    "patch_path": f"./data_starmen/anomaly_patches/{anomaly}__starman__subject_s{subject}__tp_{t}_patches.npy",
+                    "centers_path": f"./data_starmen/anomaly_patches/{anomaly}__starman__subject_s{subject}_tp_{t}_centers.npy"
+                }
+                data_patches.append(row)
 
     # Saving the data in csv file
     data_df_image = pd.DataFrame(data_image)

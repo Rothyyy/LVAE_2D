@@ -15,7 +15,7 @@ from dataset.LongitudinalDataset2D_patch_contour import LongitudinalDataset2D_pa
 from longitudinalModel.fit_longitudinal_estimator_on_nn import fit_longitudinal_estimator_on_nn
 from dataset.group_based_train_test_split import group_based_train_test_split
 
-from nnModels.CVAE2D_PATCH import CVAE2D_PATCH, CVAE2D_PATCH_16, CVAE2D_PATCH_32, CVAE2D_PATCH_3latent64, CVAE2D_PATCH_3latent32, CVAE2D_PATCH_7
+from nnModels.CVAE2D_PATCH import CVAE2D_PATCH, CVAE2D_PATCH_16, CVAE2D_PATCH_32, CVAE2D_PATCH_64, CVAE2D_PATCH_4latent64, CVAE2D_PATCH_3latent32, CVAE2D_PATCH_7 
 from nnModels.losses import image_reconstruction_error_patch, pixel_reconstruction_error
 
 from utils.display_individual_observations_2D import project_encodings_for_results
@@ -103,7 +103,9 @@ if __name__=="__main__":
     elif latent_dimension == 32:
         model_type = CVAE2D_PATCH_32
     elif latent_dimension == 364:
-        model_type = CVAE2D_PATCH_3latent64
+        model_type = CVAE2D_PATCH_4latent64
+    elif latent_dimension == 64:
+        model_type = CVAE2D_PATCH_64
     elif latent_dimension == 7:
         model_type = CVAE2D_PATCH_7
     else:

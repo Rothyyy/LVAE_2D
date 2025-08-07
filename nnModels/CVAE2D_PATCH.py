@@ -605,7 +605,7 @@ class CVAE2D_PATCH_3latent32(nn.Module):
             [self.conv1, self.conv2, self.conv3, self.upconv1, self.upconv2, self.upconv3])
 
 
-class CVAE2D_PATCH_3latent64(nn.Module):
+class CVAE2D_PATCH_64(nn.Module):
     """
     Convolutional 2D variational autoencoder, used to test the method.
     :attr: beta: regularisation term of the variational autoencoder. Increasing gamma gives more importance to the KL
@@ -616,7 +616,7 @@ class CVAE2D_PATCH_3latent64(nn.Module):
     """
 
     def __init__(self, latent_representation_size=64, device=torch.device('cuda' if torch.cuda.is_available() else 'cpu')):
-        super(CVAE2D_PATCH_3latent64, self).__init__()
+        super(CVAE2D_PATCH_64, self).__init__()
         nn.Module.__init__(self)
         self.beta = 5
         self.gamma = 100
@@ -666,7 +666,7 @@ class CVAE2D_PATCH_3latent64(nn.Module):
         return h8
 
     def to(self, *args, **kwargs):
-        new_self = super(CVAE2D_PATCH_3latent64, self).to(*args, **kwargs)
+        new_self = super(CVAE2D_PATCH_64, self).to(*args, **kwargs)
         device = next(self.parameters()).device
         self.device = device
         return new_self
@@ -713,7 +713,7 @@ class CVAE2D_PATCH_3latent64(nn.Module):
             [self.conv1, self.conv2, self.conv3, self.upconv1, self.upconv2, self.upconv3])
 
 
-class CVAE2D_PATCH_64(nn.Module):
+class CVAE2D_PATCH_4latent64(nn.Module):
     """
     Convolutional 2D variational autoencoder, used to test the method.
     :attr: beta: regularisation term of the variational autoencoder. Increasing gamma gives more importance to the KL
@@ -724,7 +724,7 @@ class CVAE2D_PATCH_64(nn.Module):
     """
 
     def __init__(self, latent_representation_size=64, device=torch.device('cuda' if torch.cuda.is_available() else 'cpu')):
-        super(CVAE2D_PATCH_64, self).__init__()
+        super(CVAE2D_PATCH_4latent64, self).__init__()
         nn.Module.__init__(self)
         self.beta = 5
         self.gamma = 100
@@ -782,7 +782,7 @@ class CVAE2D_PATCH_64(nn.Module):
         return h9
 
     def to(self, *args, **kwargs):
-        new_self = super(CVAE2D_PATCH_64, self).to(*args, **kwargs)
+        new_self = super(CVAE2D_PATCH_4latent64, self).to(*args, **kwargs)
         device = next(self.parameters()).device
         self.device = device
         return new_self
