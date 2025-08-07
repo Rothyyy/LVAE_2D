@@ -15,7 +15,7 @@ from longitudinalModel.train import train, train_kfold_patch, train_kfold_patch_
 from dataset.group_based_train_test_split import group_based_train_test_split
 from dataset.split_k_folds import train_k_folds_split_patch
 
-from nnModels.CVAE2D_PATCH import CVAE2D_PATCH, CVAE2D_PATCH_16, CVAE2D_PATCH_32, CVAE2D_PATCH_3latent64, CVAE2D_PATCH_3latent32, CVAE2D_PATCH_7
+from nnModels.CVAE2D_PATCH import CVAE2D_PATCH, CVAE2D_PATCH_16, CVAE2D_PATCH_32, CVAE2D_PATCH_3latent64, CVAE2D_PATCH_3latent32, CVAE2D_PATCH_7, CVAE2D_PATCH_64
 from nnModels.losses import spatial_auto_encoder_loss
 
 from utils.display_individual_observations_2D import display_individual_observations_2D
@@ -74,6 +74,8 @@ elif latent_representation_size == 32:
     model_type = CVAE2D_PATCH_32
 elif latent_representation_size == 364:
     model_type = CVAE2D_PATCH_3latent64
+elif latent_representation_size == 64:
+    model_type = CVAE2D_PATCH_64
 elif latent_representation_size == 7:
     model_type = CVAE2D_PATCH_7
 else:

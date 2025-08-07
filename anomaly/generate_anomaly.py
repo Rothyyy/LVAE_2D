@@ -47,7 +47,6 @@ if __name__ == "__main__":
 
     for subject in random_subject:
         ages = np.array(ages_list[subject*10 : subject*10+10]).astype(float)
-
         for t in range(10):
             
             image_path = f"data_starmen/images/SimulatedData__Reconstruction__starman__subject_s{subject}__tp_{t}.npy"
@@ -59,7 +58,7 @@ if __name__ == "__main__":
             image_uint8 = (image * 255).astype(np.uint8)
 
             # Optional: threshold the image to get binary input for contours
-            _, binary = cv2.threshold(image_uint8, 127, 255, cv2.THRESH_BINARY)
+            _, binary = cv2.threshold(image_uint8, 80, 255, cv2.THRESH_BINARY)
 
             # Find contours
             contours, hierarchy = cv2.findContours(binary, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
@@ -75,15 +74,16 @@ if __name__ == "__main__":
             if anomaly == "shrinking_circle":
                 cv2.circle(image_uint8, contours[leftmost_position], round(ages[9-t]-ages[0]), (255,255,255), -1)
             if anomaly == "darker_circle":
-                cv2.circle(image_uint8, contours[leftmost_position], 2, 
+                cv2.circle(image_uint8, contours[leftmost_position] + [3,1], 2, 
                            (max(0, 200-20*round(ages[t]-ages[0])),
                             max(0, 200-20*round(ages[t]-ages[0])),
                             max(0, 200-20*round(ages[t]-ages[0]))), -1)
             if anomaly == "darker_line":
-                cv2.line(image_uint8, contours[leftmost_position] + 1, contours[leftmost_position] + 4,     # TODO: Maybe consider better line position ?
+                cv2.line(image_uint8, contours[leftmost_position] + [3, 1], contours[leftmost_position] + [5 , 2],     # TODO: Maybe consider better line position ?
                          ((max(0, 200-20*round(ages[t]-ages[0])),
                            max(0, 200-20*round(ages[t]-ages[0])),
                            max(0, 200-20*round(ages[t]-ages[0])))), 2)
+
 
             # Saving the image in npy format
             image = image_uint8.astype(np.float64) / 255

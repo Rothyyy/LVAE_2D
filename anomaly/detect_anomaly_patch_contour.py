@@ -14,7 +14,7 @@ from dataset.Dataset2D import Dataset2D_patch
 from longitudinalModel.fit_longitudinal_estimator_on_nn import fit_longitudinal_estimator_on_nn
 from dataset.group_based_train_test_split import group_based_train_test_split
 
-from nnModels.CVAE2D_PATCH import CVAE2D_PATCH, CVAE2D_PATCH_16, CVAE2D_PATCH_32, CVAE2D_PATCH_3latent64, CVAE2D_PATCH_3latent32, CVAE2D_PATCH_7
+from nnModels.CVAE2D_PATCH import CVAE2D_PATCH, CVAE2D_PATCH_16, CVAE2D_PATCH_32, CVAE2D_PATCH_3latent64, CVAE2D_PATCH_3latent32, CVAE2D_PATCH_7, CVAE2D_PATCH_64
 from nnModels.losses import image_reconstruction_error_patch, pixel_reconstruction_error
 
 from utils.display_individual_observations_2D import project_encodings_for_results
@@ -26,27 +26,32 @@ from utils.patch_to_image import pad_array, pixel_counting, patch_to_image, patc
 
 np.set_printoptions(threshold=np.inf)
 
-def compute_pixel_ano_score(patch_loss):
+def compute_pixel_ano_score(anomaly_score_array, centers, patch_size=15):
 
     # This array is used to store the anomaly score of one pixel
     pixel_anomaly_score = np.zeros((64,64))
 
     # This array was obtained previously after putting the image in the model and getting the loss/anomaly score
-    if patch_loss.shape != (64,64):
-        patch_loss = np.array(patch_loss).reshape((50,50))
-        patch_loss = pad_array(patch_loss)
+    # if anomaly_score_array.shape != (64,64):
+    #     anomaly_score_array = np.array(anomaly_score_array).reshape((50,50))
+    #     anomaly_score_array = pad_array(anomaly_score_array)
+
+    pixel_count_mask = np.zeros((64,64), dtype=np.int32)
+    pixel_count_mask[centers[:,0], centers[:,1]] = 1
 
 
-    for i in range(64):
-        for j in range(64):
-            # Build the window to get all the anomaly patches
-            top = max(i - 15//2, 0)
-            bottom = min(i + 15//2 + 1, 64)
-            left = max(j - 15//2, 0)
-            right = min(j + 15//2 + 1, 64)
+    for x, y in centers:
+        # Build the window to get all the anomaly patches
+        top = max(x - patch_size//2, 0)
+        bottom = min(x + patch_size//2 + 1, 64)
+        left = max(y - patch_size//2, 0)
+        right = min(y + patch_size//2 + 1, 64)
 
-            pixel_anomaly_score[i,j] += np.sum(patch_loss[top:bottom , left:right])     # Just compute sum
-            pixel_anomaly_score[i,j] += np.sum(patch_loss[top:bottom , left:right])/pixel_counting[i,j]     # With mean
+        num_patch = np.sum(pixel_count_mask[top:bottom , left:right])
+        
+
+        # pixel_anomaly_score[x,y] += np.sum(anomaly_score_array[top:bottom , left:right])     # Just compute sum
+        pixel_anomaly_score[x,y] += np.sum(anomaly_score_array[top:bottom , left:right])/num_patch     # With mean
              
     return pixel_anomaly_score
 
@@ -112,6 +117,8 @@ if __name__=="__main__":
         model_type = CVAE2D_PATCH_32
     elif latent_dimension == 364:
         model_type = CVAE2D_PATCH_3latent64
+    elif latent_dimension == 64:
+        model_type = CVAE2D_PATCH_64
     elif latent_dimension == 7:
         model_type = CVAE2D_PATCH_7
     else:
@@ -185,6 +192,7 @@ if __name__=="__main__":
                 ###### Compute anomaly map
                 
                 anomaly_score_map = compute_anomaly_image(image_anomaly_score, image_centers)    # shape = [64, 64]
+                anomaly_score_map = compute_pixel_ano_score(anomaly_score_map, image_centers)
                 
                 image_array_original[t] = patch_contour_to_image(patch_image_t, image_centers)
                 image_array_reconstructed[t] = patch_contour_to_image(recon_patches_VAE_t, image_centers)

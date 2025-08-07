@@ -81,13 +81,15 @@ def fit_longitudinal_estimator_on_nn_patch_contour_v1(data, model, device, longi
         for i in range(encodings.shape[1]):
             encodings_df.insert(len(encodings_df.columns), f"ENCODING{i}",
                                 encodings[:, i].detach().clone().tolist())
-        encodings_df['ID'] = encodings_df['ID'].astype(str)
-
+        # encodings_df['ID'] = encodings_df['ID'].astype(str)
+    # encodings_df.to_csv("./encodings.csv")
+    # exit()
     try:
+        print("Try 1")
         encodings_data = Data.from_dataframe(encodings_df)
         longitudinal_estimator.fit(encodings_data, longitudinal_estimator_settings)
     except:
-        print(encodings_df.columns)
+        print("Try 2")
         # try:
         encodings_df = encodings_df.reset_index(drop=True)
         encodings_data = Data.from_dataframe(encodings_df)

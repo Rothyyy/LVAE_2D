@@ -32,6 +32,18 @@ def get_filled_contour_mask(image):
     # Put image pixel value in [0, 255]
     if np.max(image <= 1):
         image = (image * 255).astype(np.uint8)
+    else:
+        image = image.astype(np.uint8)
+
+    # Threshold the image
+    _, thresh = cv2.threshold(image, 100, 255, cv2.THRESH_BINARY)
+
+    # OPTIONAL: Morph close to fill small black holes
+    kernel = np.ones((15, 15), np.uint8)
+    closed = cv2.morphologyEx(thresh, cv2.MORPH_CLOSE, kernel)
+
+    # Find contours
+    contours, _ = cv2.findContours(closed, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
     # Threshold the image
     _, thresh = cv2.threshold(image, 100, 255, cv2.THRESH_BINARY)
