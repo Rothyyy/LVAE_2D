@@ -8,10 +8,10 @@ def plot_anomaly_bar(array_anomaly_detected, model_name, anomaly_type, method, n
     This function will plot bars corresponding to the number of time the model detect
     an anomaly for the i-th image of a subject.
     """
-    save_path = f"anomaly/figure_reconstruction/bar_plots/{anomaly_type}/{model_name}_{method}_{anomaly_type}_bar_plot.pdf"
-    os.makedirs(f"anomaly/figure_reconstruction/bar_plots/{anomaly_type}", exist_ok=True)
+    save_path = f"plots/fig_anomaly_reconstruction/{anomaly_type}/{model_name}_{method}_{anomaly_type}_bar_plot.pdf"
+    os.makedirs(f"plots/fig_anomaly_reconstruction/{anomaly_type}", exist_ok=True)
     x = np.array([i for i in range(1, 11)])
-    color = "tab:blue" if model_name=="VAE" else "tab:orange"
+    color = "tab:blue" if "VAE" in model_name else "tab:orange"
 
     fig, ax = plt.subplots()
     ax.bar(x, array_anomaly_detected, color=color, edgecolor='black')
@@ -151,3 +151,77 @@ def plot_anomaly_figure_patch(original_image, reconstructed_image_VAE, anomaly_m
     plt.close(f)
     plt.clf()
     return 
+
+
+def plot_anomaly_figure_patch_heatmap(inputs, reconstructions, anomaly_map_VAE, anomaly_scores, anomaly_type, id, latent_dimension=64, cmap='jet'):
+    """
+    Plots a 3-row grid of:
+    - original images
+    - reconstructions
+    - anomaly heatmaps
+    
+    Parameters:
+        inputs (np.ndarray): Array of shape (N, H, W) or (N, H, W, 3)
+        recons (np.ndarray): Array of same shape as inputs
+        anomaly_scores (np.ndarray): Array of shape (N, H, W)
+        cmap (str): Colormap for the heatmaps
+    """
+
+    # os.makedirs(f"plots/fig_anomaly_reconstruction/{anomaly_type}", exist_ok=True)
+    # save_path = f"plots/fig_anomaly_reconstruction/{anomaly_type}/AD_{latent_dimension}_subject_{id}_HM.pdf"
+    os.makedirs(f"plots/fig_anomaly_reconstruction/{anomaly_type}", exist_ok=True)
+    save_path = f"plots/fig_anomaly_reconstruction/{anomaly_type}/AD_{latent_dimension}_subject_{id}.pdf"
+
+    N = anomaly_scores.shape[0]
+    # Compute the residual and binary mask
+    fig_width = inputs.shape[0] * 10
+    fig_height = 50  # Adjust as needed
+
+    fig, axes = plt.subplots(4, N, figsize=(fig_width, fig_height), constrained_layout=True)  # 4 rows, N columns
+
+    # To get RGB output in the anomaly map
+    binary_overlay = np.zeros((10,64,64,3))
+    binary_overlay[:,:,:, 2] = anomaly_map_VAE
+
+    vmin = np.min(anomaly_scores)
+    vmax = np.max(anomaly_scores)
+
+    for i in range(N):
+        # --- Row 1: Input ---
+        axes[0, i].imshow(inputs[i], cmap='gray')
+        axes[0, i].axis('off')
+
+        # --- Row 2: Reconstruction ---
+        axes[1, i].imshow(reconstructions[i], cmap='gray')
+        axes[1, i].axis('off')
+
+        # --- Row 3: Binary anomaly map ---
+        axes[2, i].imshow(binary_overlay[i])
+        axes[2, i].axis('off')
+
+        # --- Row 4: Heatmap ---
+        im = axes[3, i].imshow(anomaly_scores[i], cmap=cmap, vmin=vmin, vmax=vmax)
+        axes[3, i].axis('off')
+
+
+    # Row labels
+    row_labels = ["Input", "VAE", "Anomalies", "Heatmap"]
+    for row in range(len(row_labels)):
+        # Add label to the first column of each row, closer and vertically centered
+        axes[row, 0].annotate(row_labels[row],
+                            xy=(-0.1, 0.5),  # Slightly to the left, centered vertically
+                            xycoords='axes fraction',
+                            ha='right',
+                            va='center',
+                            fontsize=60)
+
+    # fig.colorbar(im, ax=axes, orientation='vertical', label='Anomaly Score')
+    cbar = fig.colorbar(im, ax=axes, orientation='vertical', fraction=0.015, pad=0.02)
+    cbar.set_label('Anomaly Score', fontsize=60)
+    cbar.ax.tick_params(labelsize=48)
+
+    plt.savefig(save_path, bbox_inches='tight')
+    plt.close(fig)
+    return 
+
+

@@ -21,10 +21,10 @@ from utils.display_individual_observations_2D import project_encodings_for_resul
 from utils.loading_image import open_npy
 from dataset.LongitudinalDataset2D_patch import LongitudinalDataset2D_patch, longitudinal_collate_2D_patch
 from dataset.LongitudinalDataset2D_patch_contour import LongitudinalDataset2D_patch_contour, longitudinal_collate_2D_patch_contour
-from .plot_anomaly import plot_anomaly_bar, plot_anomaly_figure_patch
-from utils.patch_to_image import pad_array, pixel_counting, patch_to_image, patch_contour_to_image
+from .plot_anomaly import plot_anomaly_bar, plot_anomaly_figure_patch, plot_anomaly_figure_patch_heatmap
+from utils.patch_to_image import patch_contour_to_image
 
-np.set_printoptions(threshold=np.inf)
+
 
 def compute_pixel_ano_score(anomaly_score_array, centers, patch_size=15):
 
@@ -149,8 +149,8 @@ if __name__=="__main__":
     VAE_threshold_99 = threshold_dict["VAE_threshold_99"]
 
     # These variables will count the total number of anomalous images/pixel detected 
-    VAE_anomaly_detected_95 = 0
-    VAE_anomaly_detected_99 = 0
+    VAE_anomaly_detected = np.zeros(10, dtype=np.int32)   # 10 images timestamp
+
 
     with torch.no_grad():
         
@@ -173,6 +173,7 @@ if __name__=="__main__":
             # TODO: It would be faster to simply load the image from the right folders => Have to write the right paths
             image_array_original = np.zeros((10,64,64))         # Array to store image to plot
             image_array_reconstructed = np.zeros((10,64,64))    # Array to store image to plot
+            anomaly_score_map = np.zeros((10,64,64))
             anomaly_map = np.zeros((10, 64, 64), dtype=bool)
 
             patches = (patches.squeeze(1)).numpy()
@@ -191,18 +192,20 @@ if __name__=="__main__":
 
                 ###### Compute anomaly map
                 
-                anomaly_score_map = compute_anomaly_image(image_anomaly_score, image_centers)    # shape = [64, 64]
-                anomaly_score_map = compute_pixel_ano_score(anomaly_score_map, image_centers)
+                anomaly_score_map[t] = compute_anomaly_image(image_anomaly_score, image_centers)    # shape = [64, 64]
+                anomaly_score_map[t] = compute_pixel_ano_score(anomaly_score_map[t], image_centers)
                 
                 image_array_original[t] = patch_contour_to_image(patch_image_t, image_centers)
                 image_array_reconstructed[t] = patch_contour_to_image(recon_patches_VAE_t, image_centers)
 
-                anomaly_map[t] = anomaly_score_map > VAE_threshold_95   #  !!! Here to change which threshold to use
-                # anomaly_map[t] = anomaly_score_map > 5   #  !!! Here to change which threshold to use
-
+                anomaly_map[t] = anomaly_score_map[t] > VAE_threshold_95   #  !!! Here to change which threshold to use
+            VAE_anomaly_detected += (anomaly_map.any(axis=(1,2)))
 
 
             # For a subject, plot the anomalous image, the reconstructed image and the residual
-            plot_anomaly_figure_patch(image_array_original, image_array_reconstructed, anomaly_map, id, anomaly, latent_dimension=latent_dimension)
-
+            # plot_anomaly_figure_patch(image_array_original, image_array_reconstructed, anomaly_map, id, anomaly, latent_dimension=latent_dimension)
+            plot_anomaly_figure_patch_heatmap(image_array_original, image_array_reconstructed, anomaly_map, anomaly_score_map,
+                                              anomaly, id, latent_dimension=latent_dimension)
+        
+        plot_anomaly_bar(VAE_anomaly_detected, f"VAE{latent_dimension}", anomaly, method, num_images)
 
