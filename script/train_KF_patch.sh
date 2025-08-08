@@ -9,5 +9,5 @@ cd /home/rsochet/Code/LVAE_2D
 module load conda
 conda activate env_LVAE
 
-python -m train.train_model_2D_KF_patch --dimension 64 --beta 1.0 --gamma 5 --iterations 200 -skip y
+python -m train.train_model_2D_KF_patch --dimension 32 --beta 1.0 --gamma 5 --iterations 200 -skip y
 

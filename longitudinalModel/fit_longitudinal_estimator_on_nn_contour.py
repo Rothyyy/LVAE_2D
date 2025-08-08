@@ -72,7 +72,7 @@ def fit_longitudinal_estimator_on_nn_patch_contour_v1(data, model, device, longi
                 times.extend([time_patch[i][t]] * number_patches)
                 for patch in range(number_patches):
                     center_coord_x, center_coord_y = centers_list[i][t][patch]
-                    patch_id = f"s_{subject_ids[i]}_{int(center_coord_x)}_{int(center_coord_y)}"
+                    patch_id = f"s_{subject_ids[i]}_{center_coord_x}_{center_coord_y}"
                     patch_ids.append(patch_id)
 
         # WARNING: If in the sample there are crops at different position for a same individual then
@@ -127,7 +127,7 @@ def fit_longitudinal_estimator_on_nn_patch_contour_v2(data_loader, model, device
                     times.extend([time_patch[i][t]] * number_patches)
                     for patch in range(number_patches):
                         center_coord_x, center_coord_y = centers_list[i][t][patch]
-                        patch_id = f"s_{subject_ids[i]}_{int(center_coord_x)}_{int(center_coord_y)}"
+                        patch_id = f"s_{subject_ids[i]}_{center_coord_x}_{center_coord_y}"
                         patch_ids.append(patch_id)
 
         # WARNING: If in the sample there are crops at different position for a same individual then
@@ -138,6 +138,11 @@ def fit_longitudinal_estimator_on_nn_patch_contour_v2(data_loader, model, device
             encodings_df.insert(len(encodings_df.columns), f"ENCODING{i}",
                                 encodings[:, i].detach().clone().tolist())
         encodings_df['ID'] = encodings_df['ID'].astype(str)
+
+
+        encodings_df.to_csv("encodings_to_test.csv", index=False)   # TODO: LINE TO REMOVE AFTER GETTING ONE
+
+
 
     try:
         print("Try 1")
@@ -152,6 +157,10 @@ def fit_longitudinal_estimator_on_nn_patch_contour_v2(data_loader, model, device
         # except:
         #     print()
         #     print("Error in fit")
+    
+    longitudinal_estimator.save(f"saved_models_2D/longitudinal_estimator_test_fold_0.json") # TODO: LINE TO REMOVE AFTER GETTING ONE
+
+
     return longitudinal_estimator, encodings_df, patch_ids
 
 

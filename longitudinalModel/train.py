@@ -365,7 +365,7 @@ def train_kfold_patch(model_type, path_best_fold_model, k_folds_index_list,
 
                 loss = reconstruction_loss + model.beta * kl_loss
                 if longitudinal_estimator is not None:
-                    alignment_loss = longitudinal_loss(mu, torch.cat(([
+                    alignment_loss = longitudinal_loss(mu.view(-1, latent_dimension), torch.cat(([
                         torch.tensor(predicted_latent_variables[str(subject_id)]).float().to(device) for subject_id in
                         data[2]])))
                     loss += model.gamma * alignment_loss
@@ -502,7 +502,7 @@ def train_kfold_patch_v1(model_type, path_best_fold_model, k_folds_index_list,
 
                 loss = reconstruction_loss + model.beta * kl_loss
                 if longitudinal_estimator is not None:
-                    alignment_loss = longitudinal_loss(mu, torch.cat(([
+                    alignment_loss = longitudinal_loss(mu.view(-1, latent_dimension), torch.cat(([
                         torch.tensor(predicted_latent_variables[subject_id]).float().to(device) for subject_id in
                         patch_ids])))
                     loss += model.gamma * alignment_loss
@@ -651,13 +651,16 @@ def train_kfold_patch_v2(model_type, path_best_fold_model, k_folds_index_list,
 
                 loss = reconstruction_loss + model.beta * kl_loss
                 if longitudinal_estimator is not None:
-                    alignment_loss = longitudinal_loss(mu, torch.cat(([
+
+                    longitudinal_prediction = torch.cat(([
                         torch.tensor(predicted_latent_variables[subject_id]).float().to(device) for subject_id in
-                        patch_ids])))
+                        patch_ids]))
+                    alignment_loss = longitudinal_loss(mu.view(-1, latent_dimension), longitudinal_prediction)
                     loss += model.gamma * alignment_loss
                     total_alignment_loss += alignment_loss.item()
 
-
+                    # mu shape = torch.Size([26220, 32, 1, 1])
+                    # longitudinal prediction shape = torch.Size([3510292, 32])
                 loss.backward()
                 optimizer.step()
                 lr_scheduler.step()

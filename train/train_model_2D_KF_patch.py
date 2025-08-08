@@ -108,26 +108,26 @@ if args.skip == "n":
     model.load_state_dict(torch.load(VAE_saving_path+f"_fold_{best_fold}.pth", map_location='cpu'))
     torch.save(model.state_dict(), path_best_fold_model)
 
-# # Training of the Longitudinal VAE
-# output_path = f"plots/training_plots/LVAE_folds/{args.nnmodel_name}_{latent_representation_size}_{beta}_{gamma}_{args.iterations}/"
-# os.makedirs(os.path.dirname(output_path), exist_ok=True)
+# Training of the Longitudinal VAE
+output_path = f"plots/training_plots/LVAE_folds/{args.nnmodel_name}_{latent_representation_size}_{beta}_{gamma}_{args.iterations}/"
+os.makedirs(os.path.dirname(output_path), exist_ok=True)
 
-# ### Hyperparameters of the longitudinal estimator
-# algo_settings = AlgorithmSettings('mcmc_saem', n_iter=args.iterations, seed=45, noise_model="gaussian_diagonal", device=device)
+### Hyperparameters of the longitudinal estimator
+algo_settings = AlgorithmSettings('mcmc_saem', n_iter=args.iterations, seed=45, noise_model="gaussian_diagonal", device=device)
 
 
-# LVAE_saving_path = f"saved_models_2D/LVAE_folds/patch_{args.nnmodel_name}_{latent_representation_size}_{beta}_{gamma}_{args.iterations}"
-# longitudinal_saving_path = f'saved_models_2D/LVAE_folds/patch_longitudinal_estimator_params_{args.nnmodel_name}_{latent_representation_size}_{beta}_{gamma}_{args.iterations}'
-# os.makedirs(os.path.dirname(LVAE_saving_path), exist_ok=True)
-# os.makedirs(os.path.dirname(longitudinal_saving_path), exist_ok=True)
+LVAE_saving_path = f"saved_models_2D/LVAE_folds/patch_{args.nnmodel_name}_{latent_representation_size}_{beta}_{gamma}_{args.iterations}"
+longitudinal_saving_path = f'saved_models_2D/LVAE_folds/patch_longitudinal_estimator_params_{args.nnmodel_name}_{latent_representation_size}_{beta}_{gamma}_{args.iterations}'
+os.makedirs(os.path.dirname(LVAE_saving_path), exist_ok=True)
+os.makedirs(os.path.dirname(longitudinal_saving_path), exist_ok=True)
 
-# best_loss = 1e15
+best_loss = 1e15
 
-# # best_loss, lvae_losses = train_kfold_patch(model_type, path_best_fold_model, folds_index, algo_settings, 
-# #                                      nb_epochs=100, lr=initial_lr, latent_dimension=latent_representation_size,
-# #                                      nn_saving_path=LVAE_saving_path, longitudinal_saving_path=longitudinal_saving_path,
-# #                                      loss_graph_saving_path=f"{output_path}/loss_longitudinal_only", previous_best_loss=best_loss,
-# #                                      spatial_loss=loss_function, batch_size=batch_size, num_workers=num_worker)
+# best_loss, lvae_losses = train_kfold_patch(model_type, path_best_fold_model, folds_index, algo_settings, 
+#                                      nb_epochs=100, lr=initial_lr, latent_dimension=latent_representation_size,
+#                                      nn_saving_path=LVAE_saving_path, longitudinal_saving_path=longitudinal_saving_path,
+#                                      loss_graph_saving_path=f"{output_path}/loss_longitudinal_only", previous_best_loss=best_loss,
+#                                      spatial_loss=loss_function, batch_size=batch_size, num_workers=num_worker)
 
 
 # best_loss, lvae_losses = train_kfold_patch_v1(model_type, path_best_fold_model, folds_index, algo_settings, 
@@ -137,25 +137,25 @@ if args.skip == "n":
 #                                      spatial_loss=loss_function, batch_size=batch_size, num_workers=num_worker)
 
 
-# # best_loss, lvae_losses = train_kfold_patch_v2(model_type, path_best_fold_model, folds_index, algo_settings, 
-# #                                      nb_epochs=100*10, lr=initial_lr, latent_dimension=latent_representation_size,
-# #                                      nn_saving_path=LVAE_saving_path, longitudinal_saving_path=longitudinal_saving_path,
-# #                                      loss_graph_saving_path=f"{output_path}/loss_longitudinal_only", previous_best_loss=best_loss,
-# #                                      spatial_loss=loss_function, batch_size=batch_size, num_workers=num_worker)
+best_loss, lvae_losses = train_kfold_patch_v2(model_type, path_best_fold_model, folds_index, algo_settings, 
+                                     nb_epochs=100*10, lr=initial_lr, latent_dimension=latent_representation_size,
+                                     nn_saving_path=LVAE_saving_path, longitudinal_saving_path=longitudinal_saving_path,
+                                     loss_graph_saving_path=f"{output_path}/loss_longitudinal_only", previous_best_loss=best_loss,
+                                     spatial_loss=loss_function, batch_size=batch_size, num_workers=num_worker)
 
-# best_fold_LVAE = CV_LVAE(model_type, folds_index, test_df, LVAE_saving_path, longitudinal_saving_path, 
-#                          latent_dimension=latent_representation_size, gamma=gamma, beta=beta, iterations=args.iterations,
-#                          plot_save_path=output_path, cv_patch=2)
+best_fold_LVAE = CV_LVAE(model_type, folds_index, test_df, LVAE_saving_path, longitudinal_saving_path, 
+                         latent_dimension=latent_representation_size, gamma=gamma, beta=beta, iterations=args.iterations,
+                         plot_save_path=output_path, cv_patch=2)
 
 
-# save_best_fold_path_VAE = f"saved_models_2D/best_patch_fold_CVAE2D_{args.dimension}_{args.beta}_{args.gamma}_{args.iterations}.pth"
-# save_best_fold_path_LVAE = f"saved_models_2D/best_patch_fold_longitudinal_estimator_params_CVAE2D_{args.dimension}_{args.beta}_{args.gamma}_{args.iterations}.json"
+save_best_fold_path_VAE = f"saved_models_2D/best_patch_fold_CVAE2D_{args.dimension}_{args.beta}_{args.gamma}_{args.iterations}.pth"
+save_best_fold_path_LVAE = f"saved_models_2D/best_patch_fold_longitudinal_estimator_params_CVAE2D_{args.dimension}_{args.beta}_{args.gamma}_{args.iterations}.json"
 
-# best_fold_model = model_type(latent_representation_size)
-# best_fold_model.gamma = gamma
-# best_fold_model.beta = beta
-# best_fold_model.load_state_dict(torch.load(LVAE_saving_path+f"_fold_{best_fold_LVAE}.pth2", map_location='cpu'))
-# torch.save(best_fold_model.state_dict(), save_best_fold_path_VAE+"2")
-# longitudinal_estimator = Leaspy.load(longitudinal_saving_path+f"_fold_{best_fold_LVAE}.json2")
-# longitudinal_estimator.save(save_best_fold_path_LVAE+"2")
+best_fold_model = model_type(latent_representation_size)
+best_fold_model.gamma = gamma
+best_fold_model.beta = beta
+best_fold_model.load_state_dict(torch.load(LVAE_saving_path+f"_fold_{best_fold_LVAE}.pth2", map_location='cpu'))
+torch.save(best_fold_model.state_dict(), save_best_fold_path_VAE+"2")
+longitudinal_estimator = Leaspy.load(longitudinal_saving_path+f"_fold_{best_fold_LVAE}.json2")
+longitudinal_estimator.save(save_best_fold_path_LVAE+"2")
 
