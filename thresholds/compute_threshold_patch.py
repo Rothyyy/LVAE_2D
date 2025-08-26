@@ -21,9 +21,10 @@ from nnModels.losses import image_reconstruction_error_patch, pixel_reconstructi
 from utils.display_individual_observations_2D import project_encodings_for_results, get_longitudinal_images
 from utils.loading_image import open_npy
 
+from torchmetrics.image import StructuralSimilarityIndexMeasure, PeakSignalNoiseRatio
 
 
-def compute_stats(all_losses, model, method):
+def compute_stats(all_losses, ssim, psnr, model, method):
     # If necessary we first transform to numpy array and flatten the list
     
     if type(all_losses) == torch.Tensor:
@@ -47,7 +48,8 @@ def compute_stats(all_losses, model, method):
         stats_dict[f"{model}_min"] = np.min(all_losses)
         stats_dict[f"{model}_max"] = np.max(all_losses)
         stats_dict[f"{model}_mean"] = np.mean(all_losses)
-
+        stats_dict[f"{model}_ssim"] = ssim.item()
+        stats_dict[f"{model}_psnr"] = psnr.item()
     return stats_dict
 
 
@@ -55,7 +57,7 @@ def plot_recon_error_histogram_patch(recon_error_list, model_name, method):
     
     save_path = f"plots/recon_error/hist_patch_{model_name}_{method}_{latent_dimension}.pdf"
     os.makedirs(f"plots/recon_error/", exist_ok=True)
-    color = "tab:blue" if model_name=="VAE" else "tab:orange"
+    color = "tab:orange" if "LVAE" in model_name else "tab:blue"
 
     if len(recon_error_list.shape) > 1:
         recon_error_list = recon_error_list.flatten() 
@@ -99,7 +101,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--method", type=str, required=False, default="image")
     parser.add_argument("--dim", type=int, required=False, default=64)
-    parser.add_argument("--beta", type=float, required=False, default=2)
+    parser.add_argument("--beta", type=float, required=False, default=1.0)
     parser.add_argument("--gamma", type=float, required=False, default=100)
     parser.add_argument("--iter", type=int, required=False, default=5)
     parser.add_argument("--size", type=int, required=False, default=15)
@@ -167,7 +169,10 @@ if __name__ == "__main__":
     model = model_type(latent_dimension)
     model.load_state_dict(torch.load(VAE_nn_saving_path, map_location='cpu'))
     model.training = False
-    model = model.to(device)    
+    model = model.to(device) 
+
+    ssim_metric_VAE = StructuralSimilarityIndexMeasure(data_range=1.0).to(device)
+    psnr_metric_VAE = PeakSignalNoiseRatio(data_range=1.0).to(device)
 
     dataset = Dataset2D_patch("data_csv/starmen_patch_test_set.csv", read_image=open_npy, transform=transformations)
     data_loader = DataLoader(dataset, batch_size=1, num_workers=num_worker, shuffle=True, pin_memory=True, collate_fn=collate_2D_patch)
@@ -186,10 +191,15 @@ if __name__ == "__main__":
 
             mu, logvar, recon_x, _ = model(x)
             reconstruction_loss = loss_function(recon_x, x)
+            ssim_metric_VAE.update(recon_x, x)
+            psnr_metric_VAE.update(recon_x, x)
 
             all_losses.extend(reconstruction_loss.tolist())
 
-    stats_dict.update(compute_stats(all_losses, "VAE", method))
+        final_ssim_VAE = ssim_metric_VAE.compute()
+        final_psnr_VAE = psnr_metric_VAE.compute()
+
+    stats_dict.update(compute_stats(all_losses, final_ssim_VAE, final_psnr_VAE, "VAE", method))
 
     plot_recon_error_histogram_patch(np.array(all_losses), "VAE", method)
 

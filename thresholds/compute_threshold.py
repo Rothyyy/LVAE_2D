@@ -20,11 +20,12 @@ from nnModels.losses import image_reconstruction_error, pixel_reconstruction_err
 from utils.display_individual_observations_2D import project_encodings_for_results, get_longitudinal_images
 from utils.loading_image import open_npy
 
+from torchmetrics.image import StructuralSimilarityIndexMeasure, PeakSignalNoiseRatio
 
 transformations = transforms.Compose([])
 
 
-def compute_stats(all_losses, model, method):
+def compute_stats(all_losses, ssim, psnr, model, method):
     # If necessary we first transform to numpy array and flatten the list
     
     if type(all_losses) == torch.Tensor:
@@ -48,6 +49,8 @@ def compute_stats(all_losses, model, method):
         stats_dict[f"{model}_min"] = np.min(all_losses)
         stats_dict[f"{model}_max"] = np.max(all_losses)
         stats_dict[f"{model}_mean"] = np.mean(all_losses)
+        stats_dict[f"{model}_ssim"] = ssim.item()
+        stats_dict[f"{model}_psnr"] = psnr.item()
 
     else: 
         stats_dict[f"{model}_threshold_95"] = np.percentile(all_losses, 95, axis=0).tolist()
@@ -62,7 +65,7 @@ def compute_stats(all_losses, model, method):
 def plot_recon_error_histogram(recon_error_list, model_name, method):
     save_path = f"plots/recon_error/hist_{model_name}_{method}.pdf"
     os.makedirs(f"plots/recon_error/", exist_ok=True)
-    color = "tab:blue" if model_name=="VAE" else "tab:orange"
+    color = "tab:orange" if "LVAE" in model_name else "tab:blue"
 
     if len(recon_error_list.shape) > 1:
         recon_error_list = recon_error_list.flatten() 
@@ -150,7 +153,8 @@ if __name__ == "__main__":
     LVAE_nn_saving_path = f"saved_models_2D/best_fold_CVAE2D_{latent_dimension}_{beta}_{gamma}_200.pth2"
     longitudinal_saving_path = f"saved_models_2D/best_fold_longitudinal_estimator_params_CVAE2D_{latent_dimension}_{beta}_{gamma}_200.json2"
 
-
+    ssim_metric_VAE = StructuralSimilarityIndexMeasure(data_range=1.0).to(device)
+    psnr_metric_VAE = PeakSignalNoiseRatio(data_range=1.0).to(device)
 
     ##### LAUNCHING COMPUTATION FOR VAE #####
 
@@ -175,11 +179,15 @@ if __name__ == "__main__":
 
             mu, logvar, recon_x, _ = model(x)
             reconstruction_loss = loss_function(recon_x, x, method)
+            ssim_metric_VAE.update(recon_x, x)
+            psnr_metric_VAE.update(recon_x, x)
 
             loss = reconstruction_loss
             all_losses.append(loss)
 
-    stats_dict.update(compute_stats(all_losses, "VAE", method))
+        final_ssim_VAE = ssim_metric_VAE.compute()
+        final_psnr_VAE = psnr_metric_VAE.compute()
+    stats_dict.update(compute_stats(all_losses, final_ssim_VAE, final_psnr_VAE, "VAE", method))
     if method != "pixel_all":
         plot_recon_error_histogram(np.array(all_losses), f"VAE_{latent_dimension}_{beta}", method)
 
@@ -194,6 +202,9 @@ if __name__ == "__main__":
     model.training = False
     longitudinal_estimator = Leaspy.load(longitudinal_saving_path)
 
+    ssim_metric_LVAE = StructuralSimilarityIndexMeasure(data_range=1.0).to(device)
+    psnr_metric_LVAE = PeakSignalNoiseRatio(data_range=1.0).to(device)
+
     if set_choice == "train":
         dataset = LongitudinalDataset2D("data_csv/starmen_train_set.csv", read_image=open_npy, transform=transformations)
     else:
@@ -206,6 +217,8 @@ if __name__ == "__main__":
         for data in data_loader:
             x = data[0]
             mus, logvars, recon_x = get_longitudinal_images(data, model, longitudinal_estimator)
+            ssim_metric_LVAE.update(recon_x, x)
+            psnr_metric_LVAE.update(recon_x, x)
             for i in range(len(mus)):
                 reconstruction_loss = loss_function(recon_x[i], x[i], method)
                 if method == "pixel":
@@ -213,9 +226,11 @@ if __name__ == "__main__":
 
                 all_losses.append(reconstruction_loss)
 
-    stats_dict.update(compute_stats(all_losses, "LVAE", method))
+    final_ssim_LVAE = ssim_metric_LVAE.compute()
+    final_psnr_LVAE = psnr_metric_LVAE.compute()
+    stats_dict.update(compute_stats(all_losses, final_ssim_LVAE, final_psnr_LVAE, "LVAE", method))
     if method != "pixel_all":
-        plot_recon_error_histogram(np.array(all_losses), f"LVAE_{latent_dimension}_{beta}_{gamma}_200", method)
+        plot_recon_error_histogram(np.array(all_losses), f"LVAE_{latent_dimension}_{beta}_{gamma}", method)
 
 
     # Printing some stats
@@ -228,6 +243,8 @@ if __name__ == "__main__":
         print("median =", stats_dict["VAE_median"])
         print("95th percentile =", stats_dict["VAE_threshold_95"])
         print("99th percentile =", stats_dict["VAE_threshold_99"])
+        print("VAE SSIM =", final_ssim_VAE)
+        print("VAE PSNR =", final_psnr_VAE)
 
         print()
         
@@ -239,6 +256,10 @@ if __name__ == "__main__":
         print(f"Number of {method} above VAE_95 =", np.sum(all_losses > stats_dict["VAE_threshold_95"]))
         print("95th percentile =", stats_dict["LVAE_threshold_95"])
         print("99th percentile =", stats_dict["LVAE_threshold_99"])
+        print("LVAE SSIM =", final_ssim_LVAE)
+        print("LVAE PSNR =", final_psnr_LVAE)
+
+        print()
 
         print("dict =", stats_dict) 
 
