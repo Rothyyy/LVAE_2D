@@ -126,13 +126,15 @@ if __name__=="__main__":
     model_VAE = CVAE2D_ORIGINAL(latent_dimension)
     model_VAE.load_state_dict(torch.load(model_VAE_path, map_location='cpu'))
     model_VAE = model_VAE.to(device)
-
+    model_VAE.training = False
+    model_VAE.eval()
 
     # Loading LVAE model
     model_LVAE = CVAE2D_ORIGINAL(latent_dimension)
     model_LVAE.load_state_dict(torch.load(model_LVAE_path, map_location='cpu'))
     model = model_LVAE.to(device)
     model_LVAE.training = False
+    model.eval()
 
     
     longitudinal_estimator = Leaspy.load(longitudinal_saving_path)

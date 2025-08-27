@@ -69,7 +69,7 @@ if __name__ == "__main__":
     ## VAE PART
     dataset = Dataset2D_patch("./data_csv/train_patch_folds/starmen_patch_train_set_fold_0.csv")
     dataloader = DataLoader(dataset, 10, num_workers=int(os.cpu_count()/4), shuffle=True, pin_memory=True)
-    random_patches = np.random.choice(25000, size=10, replace=False)
+    random_patches = np.random.choice(1000, size=10, replace=False)
     print("Random patch number =", random_patches)
 
     for data in dataloader:

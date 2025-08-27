@@ -52,10 +52,10 @@ if __name__=="__main__":
 
 
     # Setting some parameters
-    latent_dimension = args.dim
+    latent_dimension = args.dimension
     beta = args.beta
 
-    n = 200  # The number of subject to consider
+    n = 5  # The number of subject to consider
     num_images = n*10
     
     num_workers = round(os.cpu_count()/6)
@@ -95,11 +95,7 @@ if __name__=="__main__":
     model_LVAE.training = False
     model_LVAE.to(device)
     longitudinal_estimator = Leaspy.load(longitudinal_saving_path)
-
-    # Loading thresholds and dataset
-    # dataset = Dataset2D(anomaly_dataset_path)
-    # dataset = Dataset2D_VAE_AD(anomaly_dataset_path)
-    # data_loader = DataLoader(dataset, batch_size=10, num_workers=num_workers, pin_memory=True, shuffle=False)
+    
 
     # Loading anomaly dataset and thresholds
     transformations = transforms.Compose([])
@@ -153,7 +149,7 @@ if __name__=="__main__":
                 # Compute VAE's reconstruction error
                 reconstruction_error_VAE = loss_function(recon_images_VAE[i, 0], images[i, 0], method)
                 
-                compare_to_threshold = reconstruction_error_VAE > VAE_threshold_99   #  !!! Here to change which threshold to use
+                compare_to_threshold = reconstruction_error_VAE > VAE_threshold_95   #  !!! Here to change which threshold to use
                 anomaly_detected_vector_VAE[i] += (compare_to_threshold).any()
                 total_detection_anomaly_VAE[i] += compare_to_threshold
 
@@ -166,7 +162,7 @@ if __name__=="__main__":
                 # Compute LVAE's reconstruction error
                 reconstruction_error = loss_function(recon_images_LVAE[i, 0], images[i, 0], method)
                 
-                compare_to_threshold = reconstruction_error > VAE_threshold_99   # Here to change with threshold to use
+                compare_to_threshold = reconstruction_error > LVAE_threshold_95   # Here to change with threshold to use
                 anomaly_detected_vector_LVAE[i] += (compare_to_threshold).any()
                 total_detection_anomaly_LVAE[i] += compare_to_threshold
                 if method != "image":
@@ -191,8 +187,8 @@ if __name__=="__main__":
         anomaly_dict_pixel = {}
         anomaly_dict_pixel["VAE_pixel_anomaly_99"] = total_detection_anomaly_VAE
         anomaly_dict_pixel["LVAE_pixel_anomaly_99"] = total_detection_anomaly_LVAE
-        with open(f'./results_pixel_AD_{anomaly}.json', 'w') as f:
-            json.dump(anomaly_dict_pixel, f, ensure_ascii=False)
+        # with open(f'./results_pixel_AD_{anomaly}.json', 'w') as f:
+        #     json.dump(anomaly_dict_pixel, f, ensure_ascii=False)
 
 
     ######## PRINTING SOME RESULTS ########

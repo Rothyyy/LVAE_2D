@@ -11,7 +11,7 @@ def plot_anomaly_bar(array_anomaly_detected, model_name, anomaly_type, method, n
     save_path = f"plots/fig_anomaly_reconstruction/{anomaly_type}/{model_name}_{method}_{anomaly_type}_bar_plot.pdf"
     os.makedirs(f"plots/fig_anomaly_reconstruction/{anomaly_type}", exist_ok=True)
     x = np.array([i for i in range(1, 11)])
-    color = "tab:blue" if "VAE" in model_name else "tab:orange"
+    color = "tab:orange" if "LVAE" in model_name else "tab:blue"
 
     fig, ax = plt.subplots()
     ax.bar(x, array_anomaly_detected, color=color, edgecolor='black')

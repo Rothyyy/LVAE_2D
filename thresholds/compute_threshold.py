@@ -163,6 +163,7 @@ if __name__ == "__main__":
     model.load_state_dict(torch.load(VAE_nn_saving_path, map_location='cpu'))
     model.to(device)
     model.training = False
+    model.eval()
 
     if set_choice == "train":
         dataset = Dataset2D("data_csv/starmen_train_set.csv", read_image=open_npy,transform=transformations)
@@ -173,7 +174,6 @@ if __name__ == "__main__":
 
     # 1 epoch to get all reconstruction error with VAE
     with torch.no_grad():
-        model.eval()
         for x in data_loader:
             x = x.to(device)
 
@@ -182,8 +182,10 @@ if __name__ == "__main__":
             ssim_metric_VAE.update(recon_x, x)
             psnr_metric_VAE.update(recon_x, x)
 
-            loss = reconstruction_loss
-            all_losses.append(loss)
+            if method == "image":
+                all_losses.append(reconstruction_loss.item())
+            else:
+                all_losses.extend(reconstruction_loss.tolist())
 
         final_ssim_VAE = ssim_metric_VAE.compute()
         final_psnr_VAE = psnr_metric_VAE.compute()
@@ -199,6 +201,7 @@ if __name__ == "__main__":
     model = CVAE2D_ORIGINAL(latent_dimension)
     model.load_state_dict(torch.load(LVAE_nn_saving_path, map_location='cpu'))
     model.to(device)
+    model.eval()
     model.training = False
     longitudinal_estimator = Leaspy.load(longitudinal_saving_path)
 
@@ -215,16 +218,18 @@ if __name__ == "__main__":
     # 1 epoch to get all reconstruction error with LVAE
     with torch.no_grad():
         for data in data_loader:
-            x = data[0]
+            x = data[0].to(device)
             mus, logvars, recon_x = get_longitudinal_images(data, model, longitudinal_estimator)
             ssim_metric_LVAE.update(recon_x, x)
             psnr_metric_LVAE.update(recon_x, x)
             for i in range(len(mus)):
                 reconstruction_loss = loss_function(recon_x[i], x[i], method)
-                if method == "pixel":
-                    reconstruction_loss = reconstruction_loss.flatten()
+                
+                if method == "image":
+                    all_losses.append(reconstruction_loss.item())
+                else:
+                    all_losses.extend(reconstruction_loss.flatten().tolist())
 
-                all_losses.append(reconstruction_loss)
 
     final_ssim_LVAE = ssim_metric_LVAE.compute()
     final_psnr_LVAE = psnr_metric_LVAE.compute()

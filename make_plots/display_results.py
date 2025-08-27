@@ -44,6 +44,7 @@ if __name__=="__main__":
     model = CVAE2D_ORIGINAL(latent_representation_size)
     model.load_state_dict(torch.load(LVAE_saving_path, map_location='cpu'))
     model.training = False
+    model.eval()
     saem_estimator = Leaspy.load(longitudinal_saving_path)
 
     num_sample = 5
