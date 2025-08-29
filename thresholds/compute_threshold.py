@@ -228,8 +228,7 @@ if __name__ == "__main__":
                 if method == "image":
                     all_losses.append(reconstruction_loss.item())
                 else:
-                    all_losses.extend(reconstruction_loss.flatten().tolist())
-
+                    all_losses.extend(reconstruction_loss.tolist())
 
     final_ssim_LVAE = ssim_metric_LVAE.compute()
     final_psnr_LVAE = psnr_metric_LVAE.compute()

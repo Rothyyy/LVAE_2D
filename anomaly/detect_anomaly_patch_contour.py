@@ -48,9 +48,7 @@ def compute_pixel_ano_score(anomaly_score_array, centers, patch_size=15):
         right = min(y + patch_size//2 + 1, 64)
 
         num_patch = np.sum(pixel_count_mask[top:bottom , left:right])
-        
 
-        # pixel_anomaly_score[x,y] += np.sum(anomaly_score_array[top:bottom , left:right])     # Just compute sum
         pixel_anomaly_score[x,y] += np.sum(anomaly_score_array[top:bottom , left:right])/num_patch     # With mean
              
     return pixel_anomaly_score
@@ -75,10 +73,10 @@ if __name__=="__main__":
     parser.add_argument("-a", "--anomaly", type=str, required=False, default="growing_circle")
     parser.add_argument("--method", type=str, required=False, default="image")
     parser.add_argument("-n", type=int, required=False, default=5)
-    parser.add_argument("--beta", type=float, required=False, default=2)
+    parser.add_argument("--beta", type=float, required=False, default=1.0)
     parser.add_argument("--gamma", type=float, required=False, default=100)
     parser.add_argument("--iterations", type=int, required=False, default=5)
-    parser.add_argument("--dim", type=int, required=False, default=64)
+    parser.add_argument("--dim", type=int, required=False, default=32)
     args = parser.parse_args()
 
 
