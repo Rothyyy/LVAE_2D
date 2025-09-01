@@ -12,9 +12,9 @@ from dataset.Dataset2D import Dataset2D, Dataset2D_patch, collate_2D_patch
 from torch.utils.data import DataLoader
 from nnModels.CVAE2D import CVAE2D
 
-from nnModels.losses import spatial_auto_encoder_loss, loss_bvae, loss_bvae2
+from nnModels.losses import spatial_auto_encoder_loss, loss_bvae, loss_bvae2, lpips_loss
 from torch.optim.lr_scheduler import CosineAnnealingWarmRestarts
-
+import lpips
 
 def train_AE(model, data_loader, nb_epochs=100, device='cuda' if torch.cuda.is_available() else 'cpu',
              nn_saving_path=None, loss_graph_saving_path=None, spatial_loss=spatial_auto_encoder_loss,
@@ -36,6 +36,7 @@ def train_AE(model, data_loader, nb_epochs=100, device='cuda' if torch.cuda.is_a
     losses = []
     best_val_loss = float('inf')
     iterator = tqdm(range(1, nb_epochs + 1), desc="Training", file=sys.stdout)
+    lpips_fn = lpips.LPIPS(net="vgg")
     for epoch in iterator:
         model.train()
         model.training = True
@@ -46,6 +47,7 @@ def train_AE(model, data_loader, nb_epochs=100, device='cuda' if torch.cuda.is_a
 
             mu, logvar, recon_x, _ = model(x)
             reconstruction_loss, kl_loss = spatial_loss(mu, logvar, recon_x, x)
+            
             loss = reconstruction_loss + kl_loss * model.beta
             loss.backward()
             optimizer.step()
@@ -88,7 +90,7 @@ def train_AE(model, data_loader, nb_epochs=100, device='cuda' if torch.cuda.is_a
 def train_AE_kfold(model_type, k_folds_index_list, nb_epochs=100, device='cuda' if torch.cuda.is_available() else 'cpu',
              nn_saving_path=None, loss_graph_saving_path=None, spatial_loss=spatial_auto_encoder_loss, 
              batch_size=256, num_workers=round(os.cpu_count()/4), 
-             latent_dimension=4, gamma=100, beta=5, train_patch=False, patch_size=15):
+             latent_dimension=4, gamma=100, beta=5, train_patch=False, patch_size=15, lpips_weight=0, lpips_loss_term=False):
     """
     Trains a variational autoencoder. Nothing longitudinal.
     The goal here is because an AE just requires image to train, it's easier to train and used already implemented
@@ -142,6 +144,10 @@ def train_AE_kfold(model_type, k_folds_index_list, nb_epochs=100, device='cuda' 
         model.to(device)
         model.device = device
 
+        lpips_fn = lpips.LPIPS(net="vgg")
+        lpips_fn = lpips_fn.to(device)
+        perceptual_loss = 0
+
         losses = []
         best_val_loss = float('inf')
         iterator = tqdm(range(1, nb_epochs + 1), desc="Training", file=sys.stdout)
@@ -160,7 +166,9 @@ def train_AE_kfold(model_type, k_folds_index_list, nb_epochs=100, device='cuda' 
 
                 mu, logvar, recon_x, _ = model(x)
                 reconstruction_loss, kl_loss = spatial_loss(mu, logvar, recon_x, x)
-                loss = reconstruction_loss + kl_loss * model.beta
+                if lpips_loss_term:
+                    perceptual_loss = lpips_loss(recon_x, x, lpips_fn=lpips_fn)
+                loss = reconstruction_loss + kl_loss * model.beta + lpips_weight*perceptual_loss
                 loss.backward()
                 optimizer.step()
                 lr_scheduler.step()
@@ -180,7 +188,9 @@ def train_AE_kfold(model_type, k_folds_index_list, nb_epochs=100, device='cuda' 
                         x = x.reshape(-1, 1, patch_size, patch_size)
                     mu, logvar, recon_x, _ = model(x)
                     reconstruction_loss, kl_loss = spatial_loss(mu, logvar, recon_x, x)
-                    loss = reconstruction_loss + kl_loss * model.beta
+                    if lpips_loss_term:
+                        perceptual_loss = lpips_loss(recon_x, x, lpips_fn=lpips_fn)
+                    loss = reconstruction_loss + kl_loss * model.beta + perceptual_loss
                     val_loss.append(loss.item())
 
                 val_mean_loss = sum(val_loss) / len(val_loss)
