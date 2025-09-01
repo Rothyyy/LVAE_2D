@@ -9,8 +9,8 @@ python -m anomaly.detect_anomaly_patch_contour --method image -a growing_circle 
 python -m anomaly.detect_anomaly_patch_contour --method image -a darker_line --dim 32 --beta 1.0
 # python -m anomaly.detect_anomaly_patch_contour --method image -a darker_circle --dim 32 --beta 1.0
 
-python -m anomaly.detect_anomaly_patch_contour --method image -a growing_circle --dim 64 --beta 1.0
-python -m anomaly.detect_anomaly_patch_contour --method image -a darker_line --dim 64 --beta 1.0
+# python -m anomaly.detect_anomaly_patch_contour --method image -a growing_circle --dim 64 --beta 1.0
+# python -m anomaly.detect_anomaly_patch_contour --method image -a darker_line --dim 64 --beta 1.0
 # python -m anomaly.detect_anomaly_patch_contour --method image -a darker_circle --dim 64 --beta 1.0
 
 # python -m anomaly.detect_anomaly_patch_contour --method image -a growing_circle --dim 16 --beta 1.0

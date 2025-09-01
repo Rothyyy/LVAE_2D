@@ -3,5 +3,5 @@ data_starmen/images/*.npy
 data_starmen/anomaly_images/*.npy
 data_starmen/anomaly_patches/*.npy
 data_starmen/images_patch/*.npy
-*.zip
+starmen_acc.zip
 *.ipynb
