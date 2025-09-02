@@ -44,7 +44,7 @@ parser.add_argument('--lr', type=float, required=False, default=1e-4,
                     help='Learning rate to train the VAE, default = 1e-4')
 parser.add_argument('--batch_size', type=int, required=False, default=256,
                     help='batch_size to train the VAE, default = 256')
-parser.add_argument("-skip", type=str, required=False, default="n")
+parser.add_argument("--skip", type=str, required=False, default="n")
 args = parser.parse_args()
 
 # First we get the different train/validation/test dataset
@@ -65,6 +65,7 @@ latent_representation_size = args.dimension
 gamma = args.gamma
 beta = args.beta
 initial_lr = args.lr
+lpips_weight = args.lpips
 
 # HERE TO CHANGE VAE ARCHITECTURE
 model = CVAE2D_ORIGINAL(latent_representation_size)
@@ -94,7 +95,8 @@ if args.skip == "n":
                 nn_saving_path=VAE_saving_path,
                 loss_graph_saving_path=output_path, spatial_loss=loss_function,
                 batch_size=batch_size, num_workers=num_worker,
-                latent_dimension=latent_representation_size, gamma=gamma, beta=beta, lpips_loss_term=True)
+                latent_dimension=latent_representation_size, gamma=gamma, beta=beta, 
+                lpips_weight=lpips_weight)
     
     best_fold = CV_VAE(CVAE2D_ORIGINAL, folds_index, test_df, VAE_saving_path, plot_save_path=output_path,
                     latent_dimension=latent_representation_size, gamma=gamma, beta=beta,

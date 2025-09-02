@@ -35,15 +35,15 @@ def fit_longitudinal_estimator_on_nn(data_loader, model, device, longitudinal_es
         longitudinal_estimator.fit(encodings_data, longitudinal_estimator_settings)
     except:
         print(encodings_df.columns)
-        try:
-            encodings_df = encodings_df.reset_index(drop=True)
-            encodings_data = Data.from_dataframe(encodings_df)
-            longitudinal_estimator.fit(encodings_data, longitudinal_estimator_settings)
-        except:
-            print()
-            print("Error in dimension features")
-            print("Model features:", longitudinal_estimator.model.features)
-            print("Data features:", encodings_data.headers)
+        # try:
+        encodings_df = encodings_df.reset_index(drop=True)
+        encodings_data = Data.from_dataframe(encodings_df)
+        longitudinal_estimator.fit(encodings_data, longitudinal_estimator_settings)
+        # except:
+        #     print()
+        #     print("Error in dimension features")
+        #     print("Model features:", longitudinal_estimator.model.features)
+        #     print("Data features:", encodings_data.headers)
     return longitudinal_estimator, encodings_df
 
 

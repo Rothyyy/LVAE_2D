@@ -11,7 +11,7 @@ def lpips_loss(reconstructed, input, lpips_fn=None):
         lpips_fn = lpips_fn.to("cuda" if torch.cuda.is_available() else "cpu")
     reconstructed_lpips = 2*reconstructed - 1
     input_lpips = 2*input -1
-    loss = lpips_fn(input_lpips, reconstructed_lpips).mean()
+    loss = lpips_fn(input_lpips, reconstructed_lpips) / input.shape[0]
     return loss
 
 

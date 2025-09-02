@@ -90,7 +90,7 @@ def train_AE(model, data_loader, nb_epochs=100, device='cuda' if torch.cuda.is_a
 def train_AE_kfold(model_type, k_folds_index_list, nb_epochs=100, device='cuda' if torch.cuda.is_available() else 'cpu',
              nn_saving_path=None, loss_graph_saving_path=None, spatial_loss=spatial_auto_encoder_loss, 
              batch_size=256, num_workers=round(os.cpu_count()/4), 
-             latent_dimension=4, gamma=100, beta=5, train_patch=False, patch_size=15, lpips_weight=0, lpips_loss_term=False):
+             latent_dimension=4, gamma=100, beta=5, train_patch=False, patch_size=15, lpips_weight=0):
     """
     Trains a variational autoencoder. Nothing longitudinal.
     The goal here is because an AE just requires image to train, it's easier to train and used already implemented
@@ -166,7 +166,7 @@ def train_AE_kfold(model_type, k_folds_index_list, nb_epochs=100, device='cuda' 
 
                 mu, logvar, recon_x, _ = model(x)
                 reconstruction_loss, kl_loss = spatial_loss(mu, logvar, recon_x, x)
-                if lpips_loss_term:
+                if lpips_weight > 0:
                     perceptual_loss = lpips_loss(recon_x, x, lpips_fn=lpips_fn)
                 loss = reconstruction_loss + kl_loss * model.beta + lpips_weight*perceptual_loss
                 loss.backward()
@@ -188,7 +188,7 @@ def train_AE_kfold(model_type, k_folds_index_list, nb_epochs=100, device='cuda' 
                         x = x.reshape(-1, 1, patch_size, patch_size)
                     mu, logvar, recon_x, _ = model(x)
                     reconstruction_loss, kl_loss = spatial_loss(mu, logvar, recon_x, x)
-                    if lpips_loss_term:
+                    if lpips_weight > 0:
                         perceptual_loss = lpips_loss(recon_x, x, lpips_fn=lpips_fn)
                     loss = reconstruction_loss + kl_loss * model.beta + perceptual_loss
                     val_loss.append(loss.item())
