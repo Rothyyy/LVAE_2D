@@ -5,3 +5,6 @@ data_starmen/anomaly_patches/*.npy
 data_starmen/images_patch/*.npy
 starmen_acc.zip
 *.ipynb
+saved_models_2D/VAE_folds/
+saved_models_2D/LVAE_folds/
+saved_models_2D/VAE_patch_folds/

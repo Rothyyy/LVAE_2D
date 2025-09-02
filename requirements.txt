@@ -8,3 +8,4 @@ scikit_learn
 tqdm
 opencv-python
 torchmetrics
+lpips
