@@ -10,6 +10,7 @@ def spatial_auto_encoder_loss(mu, logVar, reconstructed, input_):
     kl_divergence = 0.5 * torch.sum(-1 - logVar + mu.pow(2) + logVar.exp()) / mu.shape[0]
     # recon_error = torch.nn.MSELoss(reduction='mean')(reconstructed, input_)
     recon_error = torch.sum((reconstructed - input_) ** 2) / input_.shape[0]
+    # recon_error = torch.sum(torch.abs(reconstructed - input_)) / input_.shape[0]
     return recon_error, kl_divergence
 
 

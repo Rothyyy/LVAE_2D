@@ -73,6 +73,7 @@ The program will load the checkpoints, thresholds and perform UAD on anomalous i
 - The `saved_models_2D` folder contains checkpoints for our models.
 - The `utils` folder contains functions used to display generated images and save them in a pdf file.
 - The `anomaly` folder contains files to generate some anomaly on the starmen dataset and perform anomaly detection. In `figure_reconstruction` you will find  results of the anomaly detection done on these figures. The bar plots shows at which timestamp the model detects an anomaly (this is done only with the `image` method). The figures, divided by the type of anomaly, shows three rows of starmen images, the first is the original image containing the anomaly, the second row shows the generated image by the VAE or LVAE, the third row shows a residual depending on the method used.
+- The `make_plots` folder contains files to generate comparison plots for VAE and LVAE on whole images
 
 
 # More details on the anomaly detection workflow
