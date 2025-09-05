@@ -6,12 +6,10 @@ def longitudinal_loss(encoded, predicted):
     return torch.sum((encoded - predicted) ** 2) / predicted.shape[0]
 
 def lpips_loss(reconstructed, input, lpips_fn=None):
-    if lpips_fn is None:
-        lpips_fn = lpips.LPIPS(net="vgg")
-        lpips_fn = lpips_fn.to("cuda" if torch.cuda.is_available() else "cpu")
-    reconstructed_lpips = 2*reconstructed - 1
-    input_lpips = 2*input -1
-    loss = lpips_fn(input_lpips, reconstructed_lpips) / input.shape[0]
+    input_lpips = input.repeat(1,3,1,1) * 2 - 1
+    reconstructed_lpips = reconstructed.repeat(1,3,1,1) * 2 - 1
+    
+    loss = lpips_fn(input_lpips, reconstructed_lpips).mean()
     return loss
 
 

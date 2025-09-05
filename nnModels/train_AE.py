@@ -144,7 +144,7 @@ def train_AE_kfold(model_type, k_folds_index_list, nb_epochs=100, device='cuda' 
         model.to(device)
         model.device = device
 
-        lpips_fn = lpips.LPIPS(net="vgg")
+        lpips_fn = lpips.LPIPS(net="alex")
         lpips_fn = lpips_fn.to(device)
         perceptual_loss = 0
 
