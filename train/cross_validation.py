@@ -27,7 +27,7 @@ from utils.loading_image import open_npy
 
 from torchmetrics.image import StructuralSimilarityIndexMeasure, PeakSignalNoiseRatio
 
-def CV_VAE_metric(model_type, fold_index_list, test_set, nn_saving_path,
+def CV_VAE_metric(model_type, fold_index_list, nn_saving_path,
            device='cuda' if torch.cuda.is_available() else 'cpu',
            latent_dimension=4, beta=5, gamma=100,
            batch_size=256, num_worker=round(os.cpu_count()/4), cv_patch=False, patch_size=15):
@@ -36,13 +36,6 @@ def CV_VAE_metric(model_type, fold_index_list, test_set, nn_saving_path,
     SSIM_fold_array = np.zeros(len(fold_index_list))
     PSNR_fold_array = np.zeros(len(fold_index_list))
     transformations = transforms.Compose([])
-
-    if cv_patch:
-        dataset = Dataset2D_patch(test_set, transform=transformations)
-        data_loader = DataLoader(dataset, batch_size=batch_size, num_workers=num_worker, shuffle=True, pin_memory=True, collate_fn=collate_2D_patch)
-    else:
-        dataset = Dataset2D(test_set)
-        data_loader = DataLoader(dataset, batch_size=batch_size, num_workers=num_worker, shuffle=True, pin_memory=True)
 
 
     for fold_index in range(len(fold_index_list)):
@@ -58,6 +51,17 @@ def CV_VAE_metric(model_type, fold_index_list, test_set, nn_saving_path,
         
         ssim_metric_VAE = StructuralSimilarityIndexMeasure(data_range=1.0).to(device)
         psnr_metric_VAE = PeakSignalNoiseRatio(data_range=1.0).to(device)
+
+        
+        if cv_patch:
+            data_path = f"./data_csv/train_patch_folds/starmen_patch_train_set_fold_{fold_index}.csv"
+            dataset = Dataset2D_patch(test_set, transform=transformations)
+            data_loader = DataLoader(dataset, batch_size=batch_size, num_workers=num_worker, shuffle=True, pin_memory=True, collate_fn=collate_2D_patch)
+        else:
+            data_path = f"./data_csv/train_folds/starmen_train_set_fold_{fold_index}.csv"
+            dataset = Dataset2D(data_path)
+            data_loader = DataLoader(dataset, batch_size=batch_size, num_workers=num_worker, shuffle=True, pin_memory=True)
+
 
         with torch.no_grad():
             for x in data_loader:
@@ -99,14 +103,12 @@ def CV_VAE_metric(model_type, fold_index_list, test_set, nn_saving_path,
 
     return 
 
-def CV_LVAE_metric(model_type, fold_index_list, test_set, nn_saving_path, longitudinal_saving_path,
+def CV_LVAE_metric(model_type, fold_index_list, nn_saving_path, longitudinal_saving_path,
            device='cuda' if torch.cuda.is_available() else 'cpu',
-           latent_dimension=4, beta=5, gamma=100,
+           latent_dimension=4, beta=5, gamma=100, cv_patch=False,
            batch_size=256, num_worker=round(os.cpu_count()/4)):
 
     transformations = transforms.Compose([])
-    dataset = LongitudinalDataset2D(test_set, read_image=open_npy, transform=transformations)
-    test_data_loader = DataLoader(dataset, batch_size=1, num_workers=num_worker, shuffle=True, pin_memory=True, collate_fn=longitudinal_collate_2D)
     folds_test_loss = np.zeros(len(fold_index_list))
     SSIM_fold_array = np.zeros(len(fold_index_list))
     PSNR_fold_array = np.zeros(len(fold_index_list))
@@ -128,9 +130,21 @@ def CV_LVAE_metric(model_type, fold_index_list, test_set, nn_saving_path, longit
         ssim_metric_LVAE = StructuralSimilarityIndexMeasure(data_range=1.0).to(device)
         psnr_metric_LVAE = PeakSignalNoiseRatio(data_range=1.0).to(device)
 
+
+        if cv_patch:
+            data_path = f"./data_csv/train_patch_folds/starmen_patch_train_set_fold_{fold_index}.csv"
+            dataset = Dataset2D_patch(test_set, transform=transformations)
+            data_loader = DataLoader(dataset, batch_size=batch_size, num_workers=num_worker, shuffle=True, pin_memory=True, collate_fn=collate_2D_patch)
+        else:
+            data_path = f"./data_csv/train_folds/starmen_train_set_fold_{fold_index}.csv"
+            dataset = Dataset2D(data_path)
+            data_loader = DataLoader(dataset, batch_size=batch_size, num_workers=num_worker, shuffle=True, pin_memory=True, collate_fn=longitudinal_collate_2D)
+
+
+
         with torch.no_grad():
 
-            for data in test_data_loader:
+            for data in data_loader:
                 x = data[0].to(device)
                 mus, logvars, recon_x = get_longitudinal_images(data, model, longitudinal_estimator)
                 ssim_metric_LVAE.update(recon_x, x)
@@ -162,7 +176,7 @@ def CV_LVAE_metric(model_type, fold_index_list, test_set, nn_saving_path, longit
 
     return 
 
-def CV_VAE(model_type, fold_index_list, test_set, nn_saving_path,
+def CV_VAE(model_type, fold_index_list, nn_saving_path,
            device='cuda' if torch.cuda.is_available() else 'cpu', plot_save_path=None,
            latent_dimension=4, beta=5, gamma=100,
            batch_size=256, num_worker=round(os.cpu_count()/4), cv_patch=False, patch_size=15):
@@ -175,12 +189,7 @@ def CV_VAE(model_type, fold_index_list, test_set, nn_saving_path,
     #         transforms.Lambda(lambda x: x.to(torch.float32))
     #         , transforms.Lambda(lambda x: 2*x - 1)
     #     ])
-    if cv_patch:
-        dataset = Dataset2D_patch(test_set, transform=transformations)
-        data_loader = DataLoader(dataset, batch_size=batch_size, num_workers=num_worker, shuffle=True, pin_memory=True, collate_fn=collate_2D_patch)
-    else:
-        dataset = Dataset2D(test_set)
-        data_loader = DataLoader(dataset, batch_size=batch_size, num_workers=num_worker, shuffle=True, pin_memory=True)
+    
 
     for fold_index in range(len(fold_index_list)):
         model = model_type(latent_dimension)
@@ -192,6 +201,15 @@ def CV_VAE(model_type, fold_index_list, test_set, nn_saving_path,
         model.eval()
         model.training=False
         losses = []
+
+        if cv_patch:
+            data_path = f"./data_csv/train_patch_folds/starmen_patch_train_set_fold_{fold_index}.csv"
+            dataset = Dataset2D_patch(test_set, transform=transformations)
+            data_loader = DataLoader(dataset, batch_size=batch_size, num_workers=num_worker, shuffle=True, pin_memory=True, collate_fn=collate_2D_patch)
+        else:
+            data_path = f"./data_csv/train_folds/starmen_train_set_fold_{fold_index}.csv"
+            dataset = Dataset2D(data_path)
+            data_loader = DataLoader(dataset, batch_size=batch_size, num_workers=num_worker, shuffle=True, pin_memory=True)
 
 
         with torch.no_grad():
@@ -231,19 +249,13 @@ def CV_VAE(model_type, fold_index_list, test_set, nn_saving_path,
 
     return best_fold
 
-def CV_LVAE(model_type, fold_index_list, test_set, nn_saving_path, longitudinal_saving_path,
+def CV_LVAE(model_type, fold_index_list, nn_saving_path, longitudinal_saving_path,
            device='cuda' if torch.cuda.is_available() else 'cpu', plot_save_path=None,
            latent_dimension=4, gamma=100, beta=5, iterations=200,
-           num_worker=round(os.cpu_count()/4), cv_patch=0):
+           num_worker=round(os.cpu_count()/4), cv_patch=False):
 
     transformations = transforms.Compose([])
-    if cv_patch == 0:
-        dataset = LongitudinalDataset2D(test_set)
-        test_data_loader = DataLoader(dataset, batch_size=1, num_workers=num_worker, shuffle=True, pin_memory=True, collate_fn=longitudinal_collate_2D)
-    else:
-        dataset = LongitudinalDataset2D_patch_contour(test_set, transform=transformations)
-        test_data_loader = DataLoader(dataset, batch_size=1, num_workers=num_worker, shuffle=True, pin_memory=True, collate_fn=longitudinal_collate_2D_patch_contour)
-            
+
     best_fold = 0
     best_loss = torch.inf
     folds_test_loss = np.zeros(len(fold_index_list))
@@ -262,9 +274,19 @@ def CV_LVAE(model_type, fold_index_list, test_set, nn_saving_path, longitudinal_
         longitudinal_estimator = Leaspy.load(longitudinal_saving_path+f"_fold_{fold_index}.json2")
         losses = [] 
 
+        if cv_patch:
+            data_path = f"./data_csv/train_patch_folds/starmen_patch_train_set_fold_{fold_index}.csv"
+            dataset = LongitudinalDataset2D_patch_contour(test_set, transform=transformations)
+            data_loader = DataLoader(dataset, batch_size=batch_size, num_workers=num_worker, shuffle=True, pin_memory=True, collate_fn=collate_2D_patch)
+        else:
+            data_path = f"./data_csv/train_folds/starmen_train_set_fold_{fold_index}.csv"
+            dataset = LongitudinalDataset2D(data_path)
+            data_loader = DataLoader(dataset, batch_size=batch_size, num_workers=num_worker, shuffle=True, pin_memory=True, collate_fn=longitudinal_collate_2D)
+
+
         with torch.no_grad():
 
-            for data in test_data_loader:
+            for data in data_loader:
                 x = data[0].to(device).float()
                 mus, logvars, recon_x = get_longitudinal_images(data, model, longitudinal_estimator)
                 reconstruction_loss, kl_loss = spatial_auto_encoder_loss(mus, logvars, recon_x, x)
@@ -351,14 +373,14 @@ if __name__ == "__main__":
             model_type = CVAE2D_PATCH_16
 
         if args.patch:
-            CV_VAE_metric(model_type, [i for i in range(8)], test_set, nn_saving_path=VAE_saving_path,
+            CV_VAE_metric(model_type, [i for i in range(8)], nn_saving_path=VAE_saving_path,
                         latent_dimension=latent_representation_size, 
                         gamma=gamma, beta=beta, batch_size=batch_size, cv_patch=True)
         else:
-            CV_VAE_metric(CVAE2D_ORIGINAL, [i for i in range(8)], "./data_csv/starmen_test_set.csv", nn_saving_path=VAE_saving_path,
+            CV_VAE_metric(CVAE2D_ORIGINAL, [i for i in range(8)], nn_saving_path=VAE_saving_path,
                         latent_dimension=latent_representation_size, 
                         gamma=gamma, beta=beta, batch_size=batch_size)
-            CV_LVAE_metric(CVAE2D_ORIGINAL, [i for i in range(8)], "./data_csv/starmen_test_set.csv", nn_saving_path=LVAE_saving_path, longitudinal_saving_path=longitudinal_saving_path,
+            CV_LVAE_metric(CVAE2D_ORIGINAL, [i for i in range(8)], nn_saving_path=LVAE_saving_path, longitudinal_saving_path=longitudinal_saving_path,
                         latent_dimension=latent_representation_size, 
                         gamma=gamma, beta=beta, batch_size=batch_size)
 
@@ -366,7 +388,7 @@ if __name__ == "__main__":
 
         # Saving the best VAE model in the right folder
         if args.skip == False:
-            best_fold = CV_VAE(CVAE2D_ORIGINAL, [i for i in range(8)], test_set, VAE_saving_path,
+            best_fold = CV_VAE(CVAE2D_ORIGINAL, [i for i in range(8)], VAE_saving_path,
                                 latent_dimension=latent_representation_size, gamma=gamma, beta=beta, batch_size=batch_size)
             print("Best VAE fold =", best_fold)
             
@@ -379,7 +401,7 @@ if __name__ == "__main__":
 
 
         # Saving the best LVAE model in the right folder
-        best_fold = CV_LVAE(CVAE2D_ORIGINAL, [i for i in range(8)], test_set, LVAE_saving_path, longitudinal_saving_path,
+        best_fold = CV_LVAE(CVAE2D_ORIGINAL, [i for i in range(8)], LVAE_saving_path, longitudinal_saving_path,
                             latent_dimension=latent_representation_size, gamma=gamma, beta=beta)
         print("Best LVAE fold =", best_fold)
 
